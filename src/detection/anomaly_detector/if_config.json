@@ -1,0 +1,35 @@
+{
+  "feature_columns": [
+    "command_length", "source_addr_ton", "source_addr_npi",
+    "data_coding", "priority_flag", "source_addr_len",
+    "message_length", "message_parts", "source_is_shortcode",
+    "source_is_alphanumeric",
+    "hour", "day_of_week", "is_business_hours", "is_weekend",
+    "is_night", "time_category_anomaly", "temporal_risk",
+    "digit_ratio", "uppercase_ratio", "special_char_ratio",
+    "space_ratio", "exclamation_count", "question_count",
+    "message_entropy", "char_diversity", "avg_word_length",
+    "max_word_length", "word_count",
+    "contains_url", "url_count", "contains_suspicious_url",
+    "contains_amount", "amount_count", "contains_code",
+    "phone_number_count", "digit_sequence_count",
+    "suspicious_word_count", "urgency_score",
+    "consecutive_uppercase", "consecutive_special_chars",
+    "source_category_match", "expected_source_type",
+    "source_similarity_score",
+    "risk_score", "urgency_pattern", "money_pattern",
+    "suspicious_domain"
+  ],
+  "model_configs": [
+    {"n_estimators": 100, "max_samples": "auto", "contamination": 0.05},
+    {"n_estimators": 150, "max_samples": 256, "contamination": 0.08},
+    {"n_estimators": 200, "max_samples": 512, "contamination": 0.10},
+    {"n_estimators": 100, "max_features": 0.8, "contamination": 0.07},
+    {"n_estimators": 150, "max_samples": 128, "contamination": 0.12}
+  ],
+  "paths": {
+    "log_dir": "logs/isolation_forest",
+    "plot_dir": "plots",
+    "models_dir": "models"
+  }
+}

@@ -14,19 +14,30 @@ import os
 from datetime import datetime
 import warnings
 import joblib
+import json
 
 warnings.filterwarnings('ignore')
 
 class IsolationForestTrainer:
-    def __init__(self, input_file='datasets/smpp_dataset_features.csv'):
+    def __init__(self, input_file='datasets/smpp_dataset_features.csv', config_file='if_config.json'):
         # Створення папок
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log_dir = 'logs/isolation_forest'
         self.plot_dir = 'plots'
         
+        # Завантаження конфігурації
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        self.feature_columns = config["feature_columns"]
+        self.model_configs = config["model_configs"]
+        self.log_dir = config["paths"]["log_dir"]
+        self.plot_dir = config["paths"]["plot_dir"]
+        self.models_dir = config["paths"]["models_dir"]
+
+        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.plot_dir, exist_ok=True)
-        os.makedirs('models', exist_ok=True)
+        os.makedirs(self.models_dir, exist_ok=True)
         
         # Налаштування логування
         log_file = os.path.join(self.log_dir, f'training_{self.timestamp}.log')
@@ -59,39 +70,8 @@ class IsolationForestTrainer:
             self.logger.error(f"Помилка завантаження файлу: {e}")
             raise
         
-        # Вибір числових ознак для Isolation Forest
-        feature_columns = [
-            # PDU ознаки
-            'command_length', 'source_addr_ton', 'source_addr_npi',
-            'data_coding', 'priority_flag', 'source_addr_len',
-            'message_length', 'message_parts', 'source_is_shortcode',
-            'source_is_alphanumeric',
-            
-            # Часові ознаки
-            'hour', 'day_of_week', 'is_business_hours', 'is_weekend',
-            'is_night', 'time_category_anomaly', 'temporal_risk',
-            
-            # Текстові статистики
-            'digit_ratio', 'uppercase_ratio', 'special_char_ratio',
-            'space_ratio', 'exclamation_count', 'question_count',
-            'message_entropy', 'char_diversity', 'avg_word_length',
-            'max_word_length', 'word_count',
-            
-            # Семантичні ознаки
-            'contains_url', 'url_count', 'contains_suspicious_url',
-            'contains_amount', 'amount_count', 'contains_code',
-            'phone_number_count', 'digit_sequence_count',
-            'suspicious_word_count', 'urgency_score',
-            'consecutive_uppercase', 'consecutive_special_chars',
-            
-            # Категоріальні ознаки
-            'source_category_match', 'expected_source_type',
-            'source_similarity_score',
-            
-            # Ризик ознаки
-            'risk_score', 'urgency_pattern', 'money_pattern',
-            'suspicious_domain'
-        ]
+        # Використання ознак з if_config.json
+        feature_columns = self.feature_columns
         
         # Фільтруємо тільки існуючі колонки
         available_features = [col for col in feature_columns if col in df.columns]
@@ -127,13 +107,8 @@ class IsolationForestTrainer:
         X_normal_scaled = self.scaler.fit_transform(X_normal)
         X_val_scaled = self.scaler.transform(X_val)
 
-        configs = [
-            {'n_estimators': 100, 'max_samples': 'auto', 'contamination': 0.05},
-            {'n_estimators': 150, 'max_samples': 256, 'contamination': 0.08},
-            {'n_estimators': 200, 'max_samples': 512, 'contamination': 0.10},
-            {'n_estimators': 100, 'max_features': 0.8, 'contamination': 0.07},
-            {'n_estimators': 150, 'max_samples': 128, 'contamination': 0.12}
-        ]
+        configs = self.model_configs
+        self.logger.info(f"Конфігурації моделей: {configs}")
 
         val_scores_all = []
 
