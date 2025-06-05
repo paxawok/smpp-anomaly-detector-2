@@ -1,0 +1,52 @@
+PrivatBank: Зарахування {amount} грн. Баланс: {balance} грн. {date} {time}
+Ощадбанк: Списання {amount} грн. Картка *{card}. Залишок {balance} грн
+monobank: Покупка {amount}₴ {merchant}. Баланс {balance}₴
+PUMB: Код підтвердження: {code}. Нікому не повідомляйте!
+Raiffeisen: Переказ {amount} грн від {sender}. Баланс {balance} грн
+OTP Bank: Ваш одноразовий пароль: {code}
+Укрсиббанк: Операція {amount} грн. Доступно: {balance} грн
+А-Банк: Кредит погашено. Сума: {amount} грн. Залишок: {balance} грн
+PrivatBank: Переказ {amount} грн. Картка *{card}. {date}
+Ощадбанк: Баланс поповнено на {amount} грн. Баланс: {balance} грн
+monobank: Поповнення на {amount} грн від {sender}. Баланс: {balance} грн
+PUMB: Здійснено покупку на {amount} грн у {merchant}. Картка *{card}
+Raiffeisen: Вхід у застосунок. Код підтвердження: {code}
+OTP Bank: Здійснено оплату на {amount} грн
+Укрсиббанк: Щомісячний платіж {amount} грн виконано
+А-Банк: Оплата комунальних послуг {amount} грн успішна
+PrivatBank: Картка *{card} активована. {date}
+Ощадбанк: Зміна PIN-коду підтверджена. {time}
+monobank: Кешбек {amount} грн за {merchant} зараховано
+PUMB: Підписка на {merchant}. Сума: {amount} грн списано
+Raiffeisen: Очікується платіж на {amount} грн. {date}
+OTP Bank: Ви встановили ліміт {amount} грн на картку *{card}
+Укрсиббанк: Баланс картки *{card}: {balance} грн
+А-Банк: Ваш кредитний ліміт змінено. Новий баланс: {balance} грн
+PrivatBank: Запланований платіж на {amount} грн виконано
+Ощадбанк: Нова виписка доступна в застосунку. {date}
+monobank: Ви набрали {amount} грн кешбеку за цей місяць
+PUMB: Нагадування: сплатіть {amount} грн до {date}
+Raiffeisen: Оплата в {merchant} успішна. Сума: {amount} грн
+OTP Bank: Щомісячне обслуговування: {amount} грн списано
+Укрсиббанк: Сума {amount} грн зарезервована для покупки
+А-Банк: Заявка на зміну ліміту прийнята. {date}
+PrivatBank: Ви отримали переказ від {sender}: {amount} грн
+Ощадбанк: Переказ на картку *{card}: {amount} грн виконано
+monobank: Платіж через Google Pay: {amount} грн
+PUMB: Платіж за реквізитами: {amount} грн. {date}
+Raiffeisen: Ваш новий баланс: {balance} грн
+OTP Bank: Код авторизації: {code}. {time}
+Укрсиббанк: Надходження зарплати: {amount} грн
+А-Банк: Картка *{card} тимчасово заблокована. {time}
+PrivatBank: Скасовано платіж {amount} грн. Картка *{card}
+Ощадбанк: Щомісячна виплата: {amount} грн. {date}
+monobank: Щомісячна підписка в {merchant} подовжена
+PUMB: Рекомендовано сплатити мінімум {amount} грн до {date}
+Raiffeisen: Комісія {amount} грн за переказ успішно списана
+OTP Bank: Новий пристрій для входу: підтверджено {time}
+Укрсиббанк: Отримано платіж: {amount} грн від {sender}
+А-Банк: Платіж за номером IBAN на суму {amount} грн виконано
+PrivatBank: Залишок по картці *{card} становить {balance} грн
+Ощадбанк: Підтверджено вхід у застосунок. Код: {code}
+monobank: Ви витратили {amount} грн у {merchant} {date}
+PUMB: Баланс рахунку {balance} грн. Оновлено {time}

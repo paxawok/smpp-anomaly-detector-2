@@ -1,0 +1,52 @@
+Rozetka: Замовлення №{order_id} оформлено на суму {amount} грн
+Rozetka: Замовлення {order_id} передано до служби доставки
+Rozetka: Оплата успішна. Сума: {amount} грн
+Rozetka: Очікуйте відправлення замовлення {order_id}
+Rozetka: ТТН {tracking} активна. Дякуємо за покупку!
+Prom.ua: Товар відправлено. ТТН: {tracking}
+Prom.ua: Замовлення {order_id} обробляється
+Prom.ua: Замовлення підтверджено. Сума: {amount} грн
+Prom.ua: Дякуємо за покупку! Очікуйте доставку
+Prom.ua: Товар із замовлення {order_id} передано до відділення
+MAKEUP: Покупка на {amount} грн. Бонуси: {bonus}
+MAKEUP: Замовлення №{order_id} готується до відправлення
+MAKEUP: Надішлемо {date}. Сума: {amount} грн
+MAKEUP: Новий баланс бонусів: {bonus}
+MAKEUP: Підтвердження замовлення №{order_id}
+Epicentr: Замовлення {order_id} готове до видачі
+Epicentr: Очікуйте кур’єра з замовленням {order_id} {date}
+Epicentr: Покупку {order_id} оплачено. Дякуємо!
+Epicentr: Замовлення сформовано. ТТН: {tracking}
+Epicentr: Сума до сплати: {amount} грн
+Foxtrot: Дякуємо за покупку! Сума: {amount} грн
+Foxtrot: Замовлення {order_id} передано до доставки
+Foxtrot: Готуємо до відправки {order_id}. Очікуйте
+Foxtrot: Оплата на {amount} грн успішна
+Foxtrot: ТТН {tracking} дійсна. Очікуйте SMS
+Comfy: Покупка оформлена. Сума: {amount} грн
+Comfy: Замовлення {order_id} очікує оплати
+Comfy: Очікуйте дзвінка для підтвердження {order_id}
+Comfy: Оплата отримана. Дякуємо за {amount} грн
+Comfy: Товар {order_id} буде доставлено {date}
+MOYO: Замовлення {order_id} в обробці
+MOYO: Сума замовлення {amount} грн підтверджена
+MOYO: Кур’єр доставить посилку {tracking} {date} {time}
+MOYO: Товар оплачено. Очікуйте доставку
+Allo: Замовлення {order_id} оформлено
+Allo: Оплата прийнята: {amount} грн
+Allo: Посилка {tracking} прибула у відділення
+Allo: Отримайте бонуси: {bonus} балів
+AliExpress: Посилка {tracking} відправлена
+AliExpress: Order {order_id} confirmed. Delivery in progress
+AliExpress: Payment of {amount} грн accepted
+AliExpress: Shipment {tracking} expected {date}
+Amazon: Order {order_id} shipped. Track: {tracking}
+Amazon: Thank you! Your order of {amount} грн is confirmed
+Amazon: Delivery scheduled for {date} {time}
+Amazon: Order {order_id} has been delivered
+Eldorado: Замовлення {order_id} сформовано
+Eldorado: Сума {amount} грн сплачена
+Eldorado: Кур'єр вийде на зв'язок {date}
+Eldorado: Посилка {tracking} у дорозі
+H&M: Дякуємо за покупку на {amount} грн
+H&M: ТТН {tracking} активна. Очікуйте доставку

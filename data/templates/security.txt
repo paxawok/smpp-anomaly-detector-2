@@ -1,0 +1,52 @@
+Google: Спроба входу з {location}. Це були ви?
+Facebook: Новий вхід з {device}
+Apple ID: Код підтвердження {code}
+Microsoft: Виявлено підозрілу активність
+Instagram: Ваш пароль було змінено
+LinkedIn: Новий пристрій {device}
+Gmail: Підтвердіть вхід — код {code}
+Google: Вхід із нового пристрою {device}
+Apple: Ваш код для входу: {code}
+Facebook: Вхід у {time} з {device}
+Microsoft: Нова спроба входу з {location}
+Instagram: Код безпеки: {code}
+Twitter: Вхід з нового місця: {location}
+Outlook: Підозрілий логін зафіксовано
+Telegram: Запит на вхід з {device}
+WhatsApp: Ваша сесія завершилась на іншому пристрої
+Google: Код відновлення паролю — {code}
+Facebook: Підтвердіть свою особу. Код: {code}
+iCloud: Увійшли з {device} о {time}
+Amazon: Виявлено зміну пароля {date}
+Netflix: Ваша IP-адреса змінилась
+LinkedIn: Підтвердіть зміну налаштувань — {code}
+Google: Запит на двофакторну авторизацію
+Apple: Новий вхід у ваш обліковий запис
+Microsoft: Зміна налаштувань безпеки
+Instagram: Вхід із незвичної локації: {location}
+Gmail: Надіслано код доступу: {code}
+Facebook: Підтвердження запиту — код {code}
+Telegram: Код входу {code}. Не передавайте нікому!
+Google: Спроба змінити пароль {date} о {time}
+Outlook: Надіслано код {code} для входу
+WhatsApp: Код для авторизації: {code}
+Netflix: Зміна пристрою. Час: {time}
+Twitter: Код підтвердження: {code}
+Microsoft: Ви нещодавно входили в {location}?
+Instagram: Ваш акаунт був заблокований тимчасово
+Amazon: Ваш код входу — {code}
+LinkedIn: Ви щойно заходили з {device}?
+Google: Двоетапна перевірка. Код: {code}
+Apple ID: Сповіщення про вхід із {location}
+Facebook: Оновлення конфіденційності профілю
+Telegram: Ви запросили вхід з {device}
+Twitter: Новий пристрій — код {code}
+iCloud: Доступ підтверджено. Код: {code}
+Outlook: Акаунт використано в {location}
+WhatsApp: Підтвердіть свою особу — {code}
+Netflix: Не вдалося виконати вхід. Причина — новий пристрій
+Amazon: Змінено параметри входу
+Gmail: Не вдалося увійти — невідомий пристрій
+Microsoft: Ваш профіль потребує додаткової перевірки
+LinkedIn: Ви активували вхід у {location}
+Instagram: Тимчасове блокування входу. Код: {code}

@@ -1,0 +1,30 @@
+Nova Poshta: Посилка {tracking} прибула у відділення №{branch}
+Nova Poshta: Термін зберігання до {date}. Посилка {tracking}
+Nova Poshta: Замовлення {order_id} готове до видачі у відділенні №{branch}
+Nova Poshta: Ваше відправлення {tracking} зберігається до {date}
+Nova Poshta: Отримайте посилку {tracking} у відділенні №{branch} до {date}
+УкрПошта: Відправлення {tracking} в дорозі. Прибуття: {date}
+УкрПошта: Посилка {tracking} очікує у відділенні №{branch}
+УкрПошта: Відправлення {tracking} доставлено {date} о {time}
+УкрПошта: Замовлення {order_id} зберігається до {date}
+УкрПошта: Надходження посилки {tracking} до пункту {branch} очікується {date}
+Justin: Замовлення {order_id} буде доставлено {date}
+Justin: Посилка {tracking} очікує видачі у відділенні №{branch}
+Justin: Доставка {tracking} перенесена на {date} {time}
+Justin: Ваша посилка {tracking} прибула у відділення
+Justin: Відправлення {tracking} у відділенні №{branch} до {date}
+Meest: Посилка {tracking} готова до видачі у пункті {branch}
+Meest: Відправлення {tracking} доставлено
+Meest: Очікуйте доставку {order_id} {date} після {time}
+Meest: Замовлення {tracking} у пункті видачі. Отримання до {date}
+Meest: Посилка {tracking} зберігається у відділенні №{branch}
+DHL: Доставка {tracking} запланована на {date} {time}
+DHL: Посилка {tracking} пройшла митний контроль
+DHL: Відправлення {tracking} очікує видачі
+DHL: Ваша посилка {tracking} буде доставлена до {date}
+DHL: Відправлення {tracking} буде у пункті №{branch} {date}
+FedEx: Ваша посилка {tracking} доставлена
+FedEx: Очікується надходження відправлення {tracking} {date}
+FedEx: Відправлення {tracking} очікує на складі до {date}
+FedEx: Замовлення {order_id} передано до доставки
+FedEx: Доставка {tracking} очікується {date} близько {time}

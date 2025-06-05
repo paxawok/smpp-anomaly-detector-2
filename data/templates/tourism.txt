@@ -1,0 +1,50 @@
+Booking.com: Бронювання №{booking_id} підтверджено
+SkyScanner: Ціни на {destination} знизились!
+Airbnb: {host} прийняв ваше бронювання
+TripAdvisor: Оцініть вашу поїздку до {destination}
+Hotels.com: Номер в {hotel} заброньовано
+Booking.com: Заселення в {hotel} {date}
+SkyScanner: Акція! Авіаквитки до {destination} зі знижкою
+Airbnb: Ваше бронювання у {destination} на {date} підтверджено
+TripAdvisor: Ваша оцінка поїздки важлива!
+Hotels.com: Підтвердження оплати: {amount} грн
+Booking.com: Скасування без штрафу до {date}
+SkyScanner: Нові рейси до {destination} вже доступні
+Airbnb: {host} залишив відгук про вас
+TripAdvisor: Знижка на готелі в {destination} до {amount} грн
+Hotels.com: {hotel} — знижка на наступне бронювання
+Booking.com: Перевірте час заїзду в {hotel}
+SkyScanner: Літак до {destination} — ціни від {amount} грн
+Airbnb: Ваше перебування починається {date}
+TripAdvisor: Ваші фото з {destination} опубліковано
+Hotels.com: Ви заробили бонус за бронювання
+Booking.com: Не забудьте про виїзд з {hotel} до {time}
+SkyScanner: Нагадування про рейс до {destination} {date}
+Airbnb: Ви отримали знижку на житло в {destination}
+TripAdvisor: Додайте свій відгук про {hotel}
+Hotels.com: Промокод на знижку в {hotel} — діє до {date}
+Booking.com: Зміна дати бронювання №{booking_id} підтверджена
+SkyScanner: Новий рейс до {destination} — квитки доступні
+Airbnb: Знижка {amount} грн для наступного візиту до {destination}
+TripAdvisor: Бронювання екскурсії у {destination} підтверджено
+Hotels.com: Ваш кешбек за бронювання нараховано
+Booking.com: Оновлено інформацію про заселення в {hotel}
+SkyScanner: Вигідні пропозиції до {destination} цього тижня
+Airbnb: Підтвердження повної оплати: {amount} грн
+TripAdvisor: Ваш маршрут до {destination} збережено
+Hotels.com: Заселення в {hotel} {date} після 14:00
+Booking.com: Очікуємо вас у {hotel}, {destination}
+SkyScanner: Квитки на рейс до {destination} — залишилось 3 місця
+Airbnb: {host} очікує на вас у {destination}
+TripAdvisor: Рейтинг вашої останньої подорожі — 4.5★
+Hotels.com: Бронювання №{booking_id} завершено успішно
+Booking.com: Ваші документи перевірено. Все готово до поїздки!
+SkyScanner: Улюблений напрямок — {destination}? Перевір нові ціни!
+Airbnb: Ваш візит розпочнеться {date}. Зв’яжіться з {host}
+TripAdvisor: Фото з поїздки до {destination} отримано
+Hotels.com: Бронювання в {hotel} успішно оновлено
+Booking.com: Залишилось 1 доба до вашого заїзду в {hotel}
+SkyScanner: Збережений маршрут до {destination} все ще доступний
+Airbnb: Нагадування про заселення — {date}
+TripAdvisor: Не забудьте поділитись враженнями про {destination}
+Hotels.com: Спасибі за бронювання! {hotel} чекає на вас

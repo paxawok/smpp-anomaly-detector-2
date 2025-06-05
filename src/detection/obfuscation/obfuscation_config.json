@@ -1,0 +1,47 @@
+{    
+    "invisible_chars": [
+        "\u200b", "\u200c", "\u200d", "\u2060", "\ufeff",
+        "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+        "\u00ad", "\u061c", "\u115f", "\u1160", "\u17b4", "\u17b5"
+    ],
+    "confusables": {
+        "а": ["a"], "е": ["e"], "о": ["o", "0"], "р": ["p"], "с": ["c"],
+        "у": ["y"], "х": ["x"], "і": ["i", "1"], "І": ["I", "1"],
+        "А": ["A"], "В": ["B", "8"], "Е": ["E"], "К": ["K"], 
+        "М": ["M"], "Н": ["H"], "О": ["O", "0"], "Р": ["P"], 
+        "С": ["C"], "Т": ["T"], "У": ["Y"], "Х": ["X"],
+        "З": ["3"], "Ч": ["4"], "б": ["6"], "Б": ["6"], "г": ["r"],
+        "a": ["а"], "e": ["е"], "o": ["о"], "p": ["р"], "c": ["с"],
+        "y": ["у"], "x": ["х"], "i": ["і"], "A": ["А"], "B": ["В"],
+        "E": ["Е"], "K": ["К"], "M": ["М"], "H": ["Н"], "O": ["О"],
+        "P": ["Р"], "C": ["С"], "T": ["Т"], "Y": ["У"], "X": ["Х"],
+        "0": ["о", "О", "o", "O"], "1": ["і", "І", "i", "I", "l"],
+        "3": ["з", "З"], "4": ["ч", "Ч", "А"], "5": ["s", "S"],
+        "6": ["б", "Б"], "8": ["в", "В", "B"], "9": ["g"]
+    },
+    "brands_with_numbers": [
+        "privat24", "monobank24", "otp24", "alfa24", "ukrsib24",
+        "sport24", "auto24", "rabota24", "olx24", "rozetka24",
+        "megasport24", "eldorado24", "foxtrot24", "allo24"
+    ],
+    "known_brands": [
+        "iphone", "iCloud", "ipad", "apple", "samsung", "google", "microsoft",
+        "windows", "android", "whatsapp", "telegram", "viber", "facebook",
+        "instagram", "youtube", "twitter", "amazon", "netflix", "spotify",
+        "uber", "airbnb", "booking", "paypal", "visa", "mastercard",
+        "privat", "monobank", "oschadbank", "raiffeisen", "otp",
+        "vodafone", "kyivstar", "lifecell", "ukrtelecom", "ukrposhta",
+        "novaposhta", "rozetka", "olx", "prom", "epicentr", "atb",
+        "silpo", "megasport", "sportmaster", "eldorado", "foxtrot",
+        "comfy", "citrus", "allo", "moyo", "watsons", "eva",
+        "wifi", "wi-fi", "sms", "email", "e-mail", "url", "http",
+        "https", "www", "com", "ua", "org", "net", "gov", "edu"
+    ],
+    "allowed_english_words": [
+        "ok", "yes", "no", "stop", "start", "end", "help", "info",
+        "code", "pin", "id", "card", "bank", "shop", "sale", "discount",
+        "free", "new", "hot", "top", "best", "super", "mega", "pro",
+        "plus", "premium", "gold", "silver", "bronze", "vip", "club",
+        "red", "black", "white", "green", "blue", "pink", "gray"
+    ]
+}

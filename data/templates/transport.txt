@@ -1,0 +1,31 @@
+Uber: Водій {driver} вже їде. Номер {car_number}
+Uber: Поїздка завершена. Сума: {amount} грн
+Uber: Очікуйте {driver} через {minutes} хв
+Uber: Авто {car_number} подано
+Bolt: Поїздка завершена. Сума: {amount} грн
+Bolt: Машина приїде за {minutes} хв
+Bolt: Номер авто {car_number}. Водій: {driver}
+Bolt: Дякуємо за поїздку!
+Uklon: Таксі прибуде через {minutes} хв
+Uklon: Номер авто: {car_number}
+Uklon: Поїздка завершена. Оплата: {amount} грн
+Uklon: Очікуйте {driver} біля вказаної адреси
+Київстар Таксі: Замовлення підтверджено. Авто {car_number}
+Київстар Таксі: Прибуття через {minutes} хв
+Київстар Таксі: Сума: {amount} грн
+BlaBlaCar: Нове бронювання від {passenger}
+BlaBlaCar: Подорож {date} о {time} підтверджена
+BlaBlaCar: Водій {driver} підтвердив поїздку
+SkyUp: Рейс {flight} вчасно. Виліт {time}
+SkyUp: Посадка на рейс {flight} розпочалась
+SkyUp: Перевірте статус рейсу {flight} в застосунку
+SkyUp: Ваш рейс {flight} перенесено на {time}
+МАУ: Рейс {flight} затримується. Нова година: {time}
+МАУ: Рейс {flight} підтверджено на {date}
+УЗ: Квиток на поїзд {train} {date}
+УЗ: Посадка на поїзд {train} о {time}
+УЗ: Ваш рейс {train} прибуває за розкладом
+УЗ: Номер вагона у квитку
+Flixbus: Автобус {train} виїхав з пункту
+Flixbus: Прибуття до станції призначено на {time}
+Flixbus: Квиток дійсний {date}

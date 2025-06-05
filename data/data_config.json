@@ -1,0 +1,93 @@
+{
+  "ua_operators": ["50", "63", "66", "67", "68", "73", "91", "92", "93", "94", "95", "96", "97", "98", "99"],
+
+  "shorteners": ["bit.ly", "tinyurl.com", "t.co", "is.gd", "buff.ly", "cutt.ly", "rb.gy", "soo.gd"],
+
+  "value_config": {
+    "amount_range": [10, 50000],
+    "balance_range": [0, 100000],
+    "card_length": 4,
+    "code_length_range": [4, 6],
+    "tracking_length": 14,
+    "order_id_length": 8,
+    "promo_length": 6,
+    "ticket_length": 10,
+    "booking_id_length": 8,
+    "car_number_format": "AA{num}AA",
+    "car_number_range": [1000, 9999],
+    "queue_range": [1, 999],
+    "minutes_range": [2, 15],
+    "flight_format": "PS{num}",
+    "flight_range": [100, 999],
+    "train_format": "{num}К",
+    "train_range": [1, 200],
+    "date_offset_days": 30,
+    "time_hours_range": [8, 20]
+  },
+
+  "category_keywords": {
+    "banking": ["банк", "рахунок", "платіж", "грн", "переказ", "monobank", "приват", "otp"],
+    "government": ["державн", "міністерств", "пенсія", "пільга", "виплата", "податок"],
+    "medical": ["лікар", "медичн", "запис", "візит", "клініка"],
+    "delivery": ["доставка", "замовлення"],
+    "otp": ["otp", "код", "code", "пароль"]
+  },
+  "value_lists": {
+    "merchant": ["АТБ", "Сільпо", "Фора", "Metro", "Ашан", "Епіцентр", "Novus", "Varus"],
+    "sender": ["Іван П.", "Марія К.", "Петро С.", "Олена І.", "Андрій М.", "Тетяна Л.", "Василь С.", "Наталія К."],
+    "service": ["Gmail", "Facebook", "Instagram", "Дія", "Twitter", "LinkedIn", "BankID", "YouTube"],
+    "driver": ["Олександр", "Володимир", "Андрій", "Сергій", "Ігор", "Руслан", "Микола", "Дмитро", "Євген", "Артем"],
+    "passenger": ["Оксана", "Тетяна", "Юлія", "Ірина", "Світлана", "Наталя", "Ганна", "Марія", "Олена", "Вікторія"],
+    "doctor": ["Петренко І.І.", "Коваль М.О.", "Шевченко О.П.", "Іваненко Р.В.", "Гнатюк Л.С.",
+               "Кравченко Д.О.", "Сидоренко Т.М.", "Лисенко А.А.", "Дорошенко В.М.", "Захарченко О.П."],
+    "discount": [10, 20, 30, 50, 70],
+    "shop": ["ZARA", "H&M", "LC Waikiki", "Mango", "Bershka", "Stradivarius", "Pull&Bear", "Reserved", "Next", "Uniqlo"],
+    "location": ["Київ", "Львів", "Одеса", "Дніпро", "Харків", "Запоріжжя", "Івано-Франківськ", "Тернопіль", "Полтава", "невідоме місце"],
+    "device": ["iPhone", "Android", "Windows PC", "MacBook", "Linux", "iPad", "Samsung Tablet", "невідомий пристрій", "Nokia", "Huawei"],
+    "subject": ["Математика", "Фізика", "Програмування", "Історія", "Хімія", "Біологія", "Економіка", "Українська мова", "Філософія", "Література"],
+    "course": ["Python для початківців", "Data Science", "Web Development", "Machine Learning",
+               "Курс з кібербезпеки", "Основи UX/UI", "Digital Marketing", "DevOps практика",
+               "JavaScript Advanced", "Аналіз даних у Excel"],
+    "destination": ["Париж", "Барселона", "Рим", "Берлін"],
+    "host": ["John", "Maria", "Pierre", "Luca", "Anna", "Mehmet", "Sara", "Carlos", "Elena", "Yuki"],
+    "hotel": ["Hilton", "Premier Palace", "Ibis", "Radisson", "Fairmont", "InterContinental", "Reikartz", "Ramada", "Accor", "Mercure"]
+  },
+
+  "source_addresses": {
+    "banking": ["14949", "10060", "3700", "PRIVAT24", "OSCHADBANK", "MONOBANK", "PUMB", "ABANK"],
+    "delivery": ["NOVAPOSHTA", "UKRPOSHTA", "JUSTIN", "MEEST", "DHL", "2400", "3040"],
+    "otp": ["Google", "Meta", "Amazon", "AUTH", "VERIFY", "2FA"],
+    "shopping": ["ROZETKA", "MAKEUP", "PROM", "FOXTROT", "EPICENTR"],
+    "government": ["DIA", "1545", "1648", "GOV", "MOZ", "DMS", "DPSU", "112"],
+    "transport": ["UBER", "BOLT", "UKLON", "7788", "TAXI"],
+    "medical": ["DOCUA", "MED", "CLINIC", "911", "HEALTH"],
+    "marketing": ["PROMO", "SALE", "INFO", "NEWS", "SHOP"],
+    "security": ["SECURE", "ALERT", "WARNING", "AUTH"],
+    "education": ["UNIV", "EDU", "COURSE", "STUDY"],
+    "utilities": ["KYIVSTAR", "VODA", "GAS", "ENERGY", "104"],
+    "tourism": ["BOOKING", "HOTEL", "TRAVEL", "TRIP"]
+  },
+
+  "suspicious_words":{
+    "ua": ["термінов", "увага", "заблоков", "негайно", "останн", 
+                   "попередж", "виграли", "безкоштов", "акція", "швидко",
+                   "втрат", "обмежен", "закрива", "призупин", "подзвон", "перекин", "телефон", "затрим", "змін", "отрим"]
+  },
+  
+  "template_files": {
+    "banking": "data/templates/banking.txt",
+    "delivery": "data/templates/delivery.txt",
+    "otp": "data/templates/otp.txt",
+    "shopping": "data/templates/shopping.txt",
+    "government": "data/templates/government.txt",
+    "transport": "data/templates/transport.txt",
+    "medical": "data/templates/medical.txt",
+    "marketing": "data/templates/marketing.txt",
+    "education": "data/templates/education.txt",
+    "security": "data/templates/security.txt",
+    "utilities": "data/templates/utilities.txt",
+    "tourism": "data/templates/tourism.txt"
+  },
+
+  "fraud_templates": "data/templates/fradulent.txt"
+}

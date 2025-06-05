@@ -1,0 +1,38 @@
+# Логи
+logs/
+*.log
+
+# Тимчасові датасети
+data/datasets/
+data/db/
+*.sqlite
+*.db
+
+# Артефакти моделей
+models/
+
+# Системні файли
+.DS_Store
+Thumbs.db
+
+# Кеші Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+
+# IDE та редактори
+.vscode/
+.idea/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Віртуальні середовища
+venv/
+.env/
+.envrc
+*.env
+
+# Звіти/графіки
+data/plots/
