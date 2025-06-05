@@ -10,7 +10,7 @@ import time
 import os
 from collections import deque
 import json
-from DatabaseManager import get_db
+from src.database.db_manager import get_db
 
 # Конфігурація Streamlit
 st.set_page_config(
