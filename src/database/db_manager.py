@@ -46,7 +46,7 @@ class DatabaseManager:
     
     def _init_database(self):
         """Ініціалізація БД з SQL-файлу"""
-        schema_path = Path("src/database/schema/init_schema.sql")
+        schema_path = Path("src/database/schema/init_schema.txt")
         with open(schema_path, encoding="utf-8") as f:
             sql_script = f.read()
 
