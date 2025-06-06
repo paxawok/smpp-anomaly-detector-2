@@ -117,8 +117,7 @@ class EnhancedSMPPDatasetGenerator:
                 lambda x: x.replace('A', '4'),
                 lambda x: x + "24",
                 lambda x: x + "-INFO",
-                lambda x: "SMS-" + x,
-                lambda x: self.obfuscate_text(x)
+                lambda x: "SMS-" + x
             ]
             return random.choice(mutations)(legit)
         

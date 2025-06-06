@@ -1,0 +1,488 @@
+{
+  "database_path": "data/db/smpp.sqlite",
+  "commands": {
+    "0x00000001": {
+      "name": "bind_receiver",
+      "type": "request",
+      "description": "Bind as a Receiver"
+    },
+    "0x80000001": {
+      "name": "bind_receiver_resp",
+      "type": "response",
+      "description": "Bind Receiver Response"
+    },
+    "0x00000002": {
+      "name": "bind_transmitter",
+      "type": "request",
+      "description": "Bind as a Transmitter"
+    },
+    "0x80000002": {
+      "name": "bind_transmitter_resp",
+      "type": "response",
+      "description": "Bind Transmitter Response"
+    },
+    "0x00000003": {
+      "name": "query_sm",
+      "type": "request",
+      "description": "Query message status"
+    },
+    "0x80000003": {
+      "name": "query_sm_resp",
+      "type": "response",
+      "description": "Query SM Response"
+    },
+    "0x00000004": {
+      "name": "submit_sm",
+      "type": "request",
+      "description": "Submit Short Message"
+    },
+    "0x80000004": {
+      "name": "submit_sm_resp",
+      "type": "response",
+      "description": "Submit SM Response"
+    },
+    "0x00000005": {
+      "name": "deliver_sm",
+      "type": "request",
+      "description": "Deliver Short Message"
+    },
+    "0x80000005": {
+      "name": "deliver_sm_resp",
+      "type": "response",
+      "description": "Deliver SM Response"
+    },
+    "0x00000006": {
+      "name": "unbind",
+      "type": "request",
+      "description": "Unbind from SMSC"
+    },
+    "0x80000006": {
+      "name": "unbind_resp",
+      "type": "response",
+      "description": "Unbind Response"
+    },
+    "0x00000007": {
+      "name": "replace_sm",
+      "type": "request",
+      "description": "Replace Short Message"
+    },
+    "0x80000007": {
+      "name": "replace_sm_resp",
+      "type": "response",
+      "description": "Replace SM Response"
+    },
+    "0x00000008": {
+      "name": "cancel_sm",
+      "type": "request",
+      "description": "Cancel Short Message"
+    },
+    "0x80000008": {
+      "name": "cancel_sm_resp",
+      "type": "response",
+      "description": "Cancel SM Response"
+    },
+    "0x00000009": {
+      "name": "bind_transceiver",
+      "type": "request",
+      "description": "Bind as a Transceiver"
+    },
+    "0x80000009": {
+      "name": "bind_transceiver_resp",
+      "type": "response",
+      "description": "Bind Transceiver Response"
+    },
+    "0x0000000B": {
+      "name": "outbind",
+      "type": "request",
+      "description": "Outbind operation"
+    },
+    "0x00000015": {
+      "name": "enquire_link",
+      "type": "request",
+      "description": "Enquire Link"
+    },
+    "0x80000015": {
+      "name": "enquire_link_resp",
+      "type": "response",
+      "description": "Enquire Link Response"
+    },
+    "0x00000021": {
+      "name": "submit_multi",
+      "type": "request",
+      "description": "Submit to multiple destinations"
+    },
+    "0x80000021": {
+      "name": "submit_multi_resp",
+      "type": "response",
+      "description": "Submit Multi Response"
+    },
+    "0x00000102": {
+      "name": "alert_notification",
+      "type": "request",
+      "description": "Alert Notification"
+    },
+    "0x00000103": {
+      "name": "data_sm",
+      "type": "request",
+      "description": "Data Short Message"
+    },
+    "0x80000103": {
+      "name": "data_sm_resp",
+      "type": "response",
+      "description": "Data SM Response"
+    }
+  },
+  
+  "status_codes": {
+    "0x00000000": {
+      "name": "ESME_ROK",
+      "description": "No Error"
+    },
+    "0x00000001": {
+      "name": "ESME_RINVMSGLEN",
+      "description": "Message Length is invalid"
+    },
+    "0x00000002": {
+      "name": "ESME_RINVCMDLEN",
+      "description": "Command Length is invalid"
+    },
+    "0x00000003": {
+      "name": "ESME_RINVCMDID",
+      "description": "Invalid Command ID"
+    },
+    "0x00000004": {
+      "name": "ESME_RINVBNDSTS",
+      "description": "Incorrect BIND Status for given command"
+    },
+    "0x00000005": {
+      "name": "ESME_RALYBND",
+      "description": "ESME Already in Bound State"
+    },
+    "0x00000006": {
+      "name": "ESME_RINVPRTFLG",
+      "description": "Invalid Priority Flag"
+    },
+    "0x00000007": {
+      "name": "ESME_RINVREGDLVFLG",
+      "description": "Invalid Registered Delivery Flag"
+    },
+    "0x00000008": {
+      "name": "ESME_RSYSERR",
+      "description": "System Error"
+    },
+    "0x0000000A": {
+      "name": "ESME_RINVSRCADR",
+      "description": "Invalid Source Address"
+    },
+    "0x0000000B": {
+      "name": "ESME_RINVDSTADR",
+      "description": "Invalid Dest Addr"
+    },
+    "0x0000000C": {
+      "name": "ESME_RINVMSGID",
+      "description": "Message ID is invalid"
+    },
+    "0x0000000D": {
+      "name": "ESME_RBINDFAIL",
+      "description": "Bind Failed"
+    },
+    "0x0000000E": {
+      "name": "ESME_RINVPASWD",
+      "description": "Invalid Password"
+    },
+    "0x0000000F": {
+      "name": "ESME_RINVSYSID",
+      "description": "Invalid System ID"
+    },
+    "0x00000011": {
+      "name": "ESME_RCANCELFAIL",
+      "description": "Cancel SM Failed"
+    },
+    "0x00000013": {
+      "name": "ESME_RREPLACEFAIL",
+      "description": "Replace SM Failed"
+    },
+    "0x00000014": {
+      "name": "ESME_RMSGQFUL",
+      "description": "Message Queue Full"
+    },
+    "0x00000015": {
+      "name": "ESME_RINVSERTYP",
+      "description": "Invalid Service Type"
+    },
+    "0x00000033": {
+      "name": "ESME_RINVNUMDESTS",
+      "description": "Invalid number of destinations"
+    },
+    "0x00000034": {
+      "name": "ESME_RINVDLNAME",
+      "description": "Invalid Distribution List name"
+    },
+    "0x00000040": {
+      "name": "ESME_RINVDESTFLAG",
+      "description": "Destination flag is invalid"
+    },
+    "0x00000042": {
+      "name": "ESME_RINVSUBREP",
+      "description": "Invalid submit with replace request"
+    },
+    "0x00000043": {
+      "name": "ESME_RINVESMCLASS",
+      "description": "Invalid esm_class field data"
+    },
+    "0x00000044": {
+      "name": "ESME_RCNTSUBDL",
+      "description": "Cannot Submit to Distribution List"
+    },
+    "0x00000045": {
+      "name": "ESME_RSUBMITFAIL",
+      "description": "submit_sm or submit_multi failed"
+    },
+    "0x00000048": {
+      "name": "ESME_RINVSRCTON",
+      "description": "Invalid Source address TON"
+    },
+    "0x00000049": {
+      "name": "ESME_RINVSRCNPI",
+      "description": "Invalid Source address NPI"
+    },
+    "0x00000050": {
+      "name": "ESME_RINVDSTTON",
+      "description": "Invalid Destination address TON"
+    },
+    "0x00000051": {
+      "name": "ESME_RINVDSTNPI",
+      "description": "Invalid Destination address NPI"
+    },
+    "0x00000053": {
+      "name": "ESME_RINVSYSTYP",
+      "description": "Invalid system_type field"
+    },
+    "0x00000054": {
+      "name": "ESME_RINVREPFLAG",
+      "description": "Invalid replace_if_present flag"
+    },
+    "0x00000055": {
+      "name": "ESME_RINVNUMMSGS",
+      "description": "Invalid number of messages"
+    },
+    "0x00000058": {
+      "name": "ESME_RTHROTTLED",
+      "description": "Throttling error"
+    }
+  },
+  
+  "network": {
+    "client_ips": [
+      "192.168.1.100",
+      "192.168.1.101", 
+      "192.168.1.102",
+      "10.0.0.50",
+      "10.0.0.51",
+      "10.0.0.52",
+      "172.16.0.10",
+      "172.16.0.11",
+      "172.16.0.12",
+      "192.168.10.25",
+      "192.168.10.26"
+    ],
+    "server_ips": [
+      "192.168.1.200",
+      "192.168.1.201",
+      "10.0.0.100",
+      "10.0.0.101",
+      "172.16.0.20",
+      "172.16.0.21",
+      "192.168.10.30",
+      "192.168.10.31"
+    ],
+    "smpp_ports": [2775, 2776, 8080, 9999, 3700],
+    "client_port_range": {
+      "min": 40000,
+      "max": 65000
+    }
+  },
+  
+  "test_data": {
+    "system_ids": [
+      "test_user",
+      "smpp_client1",
+      "smpp_client2",
+      "bulk_sender",
+      "marketing_app",
+      "notification_srv",
+      "gateway_01",
+      "api_client"
+    ],
+    "passwords": [
+      "test_pass",
+      "secure123",
+      "smpp_pwd",
+      "client_secret",
+      "pass2024"
+    ],
+    "system_types": [
+      "SMPP",
+      "VMA",
+      "OTA",
+      "WAP",
+      ""
+    ],
+    "service_types": [
+      "",
+      "CMT",
+      "CPT",
+      "VMN",
+      "VMA",
+      "WAP",
+      "USSD"
+    ],
+    "phone_prefixes": [
+      "38050",
+      "38067",
+      "38068",
+      "38096",
+      "38097",
+      "38098",
+      "38063",
+      "38093",
+      "38073"
+    ],
+    "messages": [
+      "Тестове повідомлення SMPP",
+      "Hello from SMPP client",
+      "Test message 123",
+      "SMPP delivery test",
+      "Ваш код підтвердження: 12345",
+      "Дякуємо за замовлення!",
+      "Нагадування: завтра о 15:00",
+      "Акція! Знижка 20% на все",
+      "Ваш баланс: 125.50 грн",
+      "Новий вхідний дзвінок від +380501234567",
+      "Термін дії пароля закінчується через 3 дні",
+      "Успішна авторизація о 14:23",
+      "Ваше замовлення №78234 відправлено",
+      "SMS test message",
+      "System notification",
+      "Welcome to our service!",
+      "Your verification code: 98765",
+      "Payment received. Thank you!",
+      "Meeting reminder: tomorrow at 3 PM",
+      "Special offer! 30% discount"
+    ],
+    "message_ids_prefix": [
+      "msg_",
+      "id_",
+      "sms_",
+      "mid_",
+      "m_"
+    ],
+    "server_ids": [
+      "SMPP_SERVER",
+      "SMSC_MAIN",
+      "GATEWAY_01", 
+      "SMS_CENTER",
+      "MSG_BROKER"
+    ]
+  },
+  
+  "encoding": {
+    "data_coding_schemes": {
+      "0x00": "SMSC Default Alphabet",
+      "0x01": "IA5 (CCITT T.50)/ASCII (ANSI X3.4)",
+      "0x02": "Octet unspecified (8-bit binary)",
+      "0x03": "Latin 1 (ISO-8859-1)",
+      "0x04": "Octet unspecified (8-bit binary)",
+      "0x05": "JIS (X 0208-1990)",
+      "0x06": "Cyrillic (ISO-8859-5)",
+      "0x07": "Latin/Hebrew (ISO-8859-8)",
+      "0x08": "UCS2 (ISO/IEC-10646)",
+      "0x09": "Pictogram Encoding",
+      "0x0A": "ISO-2022-JP (Music Codes)",
+      "0x0D": "Extended Kanji JIS(X 0212-1990)",
+      "0x0E": "KS C 5601"
+    },
+    "esm_class_values": {
+      "0x00": "Default SMSC Mode",
+      "0x01": "Datagram mode",
+      "0x02": "Forward (i.e. Transaction) mode",
+      "0x03": "Store and Forward mode",
+      "0x10": "Delivery Receipt",
+      "0x20": "Delivery Acknowledgement"
+    },
+    "registered_delivery_flags": {
+      "0x00": "No SMSC Delivery Receipt requested",
+      "0x01": "SMSC Delivery Receipt requested where final delivery outcome is success or failure",
+      "0x02": "SMSC Delivery Receipt requested where the final delivery outcome is failure"
+    }
+  },
+  
+  "ton_npi": {
+    "type_of_number": {
+      "0": "Unknown",
+      "1": "International",
+      "2": "National", 
+      "3": "Network Specific",
+      "4": "Subscriber Number",
+      "5": "Alphanumeric",
+      "6": "Abbreviated"
+    },
+    "numbering_plan": {
+      "0": "Unknown",
+      "1": "ISDN (E163/E164)",
+      "3": "Data (X.121)",
+      "4": "Telex (F.69)",
+      "6": "Land Mobile (E.212)",
+      "8": "National",
+      "9": "Private",
+      "10": "ERMES",
+      "14": "Internet (IP)",
+      "18": "WAP Client Id"
+    }
+  },
+  
+  "scenarios": {
+    "basic_session": {
+      "name": "Basic SMPP Session",
+      "sequence": [
+        {"command": "bind_transceiver", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": 0, "repeat": 3},
+        {"command": "enquire_link", "expect_status": 0},
+        {"command": "unbind", "expect_status": 0}
+      ]
+    },
+    "high_throughput": {
+      "name": "High Throughput Session",
+      "sequence": [
+        {"command": "bind_transceiver", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": 0, "repeat": 20},
+        {"command": "enquire_link", "expect_status": 0, "repeat": 2},
+        {"command": "submit_sm", "expect_status": 0, "repeat": 15},
+        {"command": "unbind", "expect_status": 0}
+      ]
+    },
+    "error_handling": {
+      "name": "Session with Errors",
+      "sequence": [
+        {"command": "bind_transceiver", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": "0x00000014"},
+        {"command": "submit_sm", "expect_status": "0x00000058"},
+        {"command": "enquire_link", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": 0},
+        {"command": "unbind", "expect_status": 0}
+      ]
+    },
+    "delivery_receipts": {
+      "name": "Delivery Receipt Flow",
+      "sequence": [
+        {"command": "bind_transceiver", "expect_status": 0},
+        {"command": "submit_sm", "expect_status": 0},
+        {"command": "deliver_sm", "expect_status": 0, "delay": 2},
+        {"command": "submit_sm", "expect_status": 0},
+        {"command": "deliver_sm", "expect_status": 0, "delay": 3},
+        {"command": "unbind", "expect_status": 0}
+      ]
+    }
+  }
+}
