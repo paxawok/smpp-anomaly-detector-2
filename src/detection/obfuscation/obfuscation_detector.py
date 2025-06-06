@@ -365,7 +365,6 @@ class ObfuscationDetector:
         
         return df
 
-
 if __name__ == "__main__":
     # Тестування
     detector = ObfuscationDetector()

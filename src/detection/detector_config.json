@@ -1,0 +1,15 @@
+{
+  "paths": {
+    "log_dir": "logs/isolation_forest",
+    "plot_dir": "plots",
+    "models_dir": "models",
+    "db_dir": "data/db"
+  },
+  "autoencoder": {
+    "encoding_dim": 32,
+    "hidden_dims": [128, 64],
+    "dropout_rate": 0.2,
+    "epochs": 30,
+    "batch_size": 128
+  }
+}
