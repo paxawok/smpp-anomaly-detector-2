@@ -17,6 +17,12 @@ class ObfuscationDetector:
             self.brands_with_numbers = set(data["brands_with_numbers"])
             self.known_brands = set(data["known_brands"])   
             self.allowed_english_words = set(data["allowed_english_words"])    
+            self.weights = data.get("weights", {
+                "word_score": 0.6,
+                "invisible_score": 0.3,
+                "strange_score": 0.1
+            })
+            self.obfuscation_threshold = data.get("obfuscation_threshold", 0.1)
     
     def is_url(self, text: str) -> bool:
         """Перевірка чи є текст URL"""
@@ -247,7 +253,7 @@ class ObfuscationDetector:
 
         for word in words:
             # Пропускаємо короткі слова та чисті числа
-            if len(word) < 3 or word.isdigit():
+            if len(word) < 2 or word.isdigit():
                 continue
 
             # Пропускаємо відомі бренди та терміни
@@ -285,9 +291,9 @@ class ObfuscationDetector:
 
         # Комбінований бал
         final_score = (
-            word_score * 0.6 +
-            invisible_score * 0.3 +
-            strange_score * 0.1
+            word_score * self.weights.get("word_score", 0.6) +
+            invisible_score * self.weights.get("invisible_score", 0.3) +
+            strange_score * self.weights.get("strange_score", 0.1)
         )
 
         return min(final_score, 1.0)
@@ -303,9 +309,9 @@ class ObfuscationDetector:
         # Якщо тільки один має обфускацію - високий бал
         elif message_score > 0.3 or sender_score > 0.3:
             combined_score = max(message_score, sender_score) * 0.8
-        # Інакше - середнє зважене
+        # Інакше - зважене
         else:
-            combined_score = message_score * 0.7 + sender_score * 0.3
+            combined_score = message_score * 0.55 + sender_score * 0.45
         
         return {
             'message_obfuscation': message_score,

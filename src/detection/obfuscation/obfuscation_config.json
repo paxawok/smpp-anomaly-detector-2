@@ -43,5 +43,11 @@
         "free", "new", "hot", "top", "best", "super", "mega", "pro",
         "plus", "premium", "gold", "silver", "bronze", "vip", "club",
         "red", "black", "white", "green", "blue", "pink", "gray"
-    ]
+    ],
+    "weights": {
+        "word_score": 0.6,
+        "invisible_score": 0.3,
+        "strange_score": 0.1
+    },
+    "obfuscation_threshold": 0.1
 }
