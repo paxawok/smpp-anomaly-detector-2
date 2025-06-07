@@ -1,3 +1,4 @@
+import binascii
 import sqlite3
 import struct
 from datetime import datetime
@@ -11,7 +12,7 @@ def read_cstring(data: bytes, offset: int) -> Tuple[str, int]:
     return data[offset:end].decode('ascii', errors='replace'), end + 1
 
 def parse_submit_sm(raw_body: bytes) -> Dict[str, any]:
-    """Парсить тіло submit_sm команди"""
+    # Парсить тіло submit_sm команди
     offset = 0
     result = {}
     
@@ -62,14 +63,25 @@ def parse_submit_sm(raw_body: bytes) -> Dict[str, any]:
         short_message = raw_body[offset:offset + sm_length]
         offset += sm_length
 
+        # Декодування short_message
+        if esm_class & 0x40:
+            if len(short_message) == 0:
+                raise ValueError("Указано UDH, але short_message порожнє")
+            udh_len = short_message[0]
+            if udh_len + 1 > len(short_message):
+                raise ValueError("UDH з некоректною довжиною")
+            user_data = short_message[udh_len + 1:]
+        else:
+            user_data = short_message
+
         # Декодуємо повідомлення
         try:
             if data_coding == 8:
-                message_text = short_message.decode('utf-16-be')
+                message_text = user_data.decode('utf-16-be')
             else:
-                message_text = short_message.decode('latin-1')
+                message_text = user_data.decode('latin-1')
         except Exception as e:
-            message_text = f"[decode error]: {e}"
+            message_text = f"[decode error: {e}]"
 
         result.update({
             'source_addr': source_addr,

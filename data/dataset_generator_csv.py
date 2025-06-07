@@ -35,7 +35,7 @@ logging.basicConfig(
 class EnhancedSMPPDatasetGenerator:
     """Покращений генератор SMPP датасету з типологізованими аномаліями"""
     
-    def __init__(self, seed=42, config_path="data_config.json"):
+    def __init__(self, seed=42, config_path="config/data_config.json"):
         random.seed(seed)
         np.random.seed(seed)
         
@@ -290,9 +290,7 @@ class EnhancedSMPPDatasetGenerator:
         message = random.choice(urgency_phrases) + " " + message
         
         # Обфусковані джерела
-        source_addr = self.obfuscate_text(
-            random.choice(self.source_addresses.get(category, ["BANK"]))
-        )
+        source_addr = random.choice(self.source_addresses.get(category, ["BANK"]))
         dest_addr = self.generate_phone_number()
         
         self.anomaly_stats['semantic'] += 1
@@ -365,27 +363,14 @@ class EnhancedSMPPDatasetGenerator:
         obfuscated_words = []
         
         for word in words:
-            if random.random() > 0.3:  # 70% шанс обфускації слова
+            if random.random() > 0.001:
                 obfuscated_words.append(self.obfuscate_text(word))
             else:
                 obfuscated_words.append(word)
         
         message = " ".join(obfuscated_words)
         
-        # Додаємо Unicode хитрощі
-        unicode_tricks = [
-            '\u200b',  # Zero-width space
-            '\u200c',  # Zero-width non-joiner
-            '\u200d',  # Zero-width joiner
-        ]
-        
-        # Вставляємо невидимі символи
-        for _ in range(random.randint(1, 3)):
-            pos = random.randint(0, len(message))
-            trick = random.choice(unicode_tricks)
-            message = message[:pos] + trick + message[pos:]
-        
-        source_addr = self.obfuscate_text(self.generate_source_addr(category, is_fraud=True))
+        source_addr = self.generate_source_addr(category, is_fraud=True)
         dest_addr = self.generate_phone_number()
         
         self.anomaly_stats['obfuscation'] += 1
@@ -630,12 +615,12 @@ if __name__ == "__main__":
     logging.info("Початок генерації тижневого SMPP трафіку...")
     
     df = generator.generate_weekly_traffic(
-        messages_per_day=5000,  # ~35000 повідомлень за тиждень
+        messages_per_day=10000,  
         anomaly_rate=0.12       # 12% аномалій
     )
     
     # Збереження датасету
-    output_file = f'datasets/smpp_weekly_dataset_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-    df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    output_file = f'data/datasets/smpp_weekly_dataset_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    df.to_csv(output_file, index=False, encoding='utf-16')
     
     logging.info(f"\nДатасет збережено в 'datasets/smpp_weekly_dataset.csv'")

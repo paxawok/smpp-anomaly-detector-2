@@ -1,5 +1,6 @@
 {
   "database_path": "data/db/smpp.sqlite",
+  "csv_dataset_path": "data/datasets/smpp_weekly_dataset_20250607_033017.csv",
   "commands": {
     "0x00000001": {
       "name": "bind_receiver",
