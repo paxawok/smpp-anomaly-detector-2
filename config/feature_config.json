@@ -1,0 +1,119 @@
+{
+  "db_path": "data/db/smpp.sqlite",
+  "csv_path": "data/datasets/smpp_weekly_dataset_20250607_053008.csv",
+  "model_path": "models/sms_classifier_20250607_0605.pkl",
+  "batch_size": 1000,
+  "shorteners": [
+    "bit.ly",
+    "tinyurl.com",
+    "clck.ru",
+    "goo.gl",
+    "short.link",
+    "t.co",
+    "ow.ly",
+    "is.gd"
+  ],
+  "source_addresses": {
+    "banking": [
+      "PRIVAT24",
+      "MONOBANK",
+      "OSCHADBANK",
+      "PUMB",
+      "ALFA",
+      "OTP",
+      "UKRSIB"
+    ],
+    "delivery": [
+      "NOVAPOSHTA",
+      "UKRPOSHTA",
+      "JUSTIN",
+      "MEEST",
+      "DHL",
+      "FEDEX"
+    ],
+    "government": [
+      "DIIA",
+      "GOV.UA",
+      "DPS",
+      "MVS",
+      "MINJUST",
+      "MINZDRAV"
+    ],
+    "medical": [
+      "HELSI",
+      "DOC.UA",
+      "MEDICS",
+      "LIKI24",
+      "APTEKA911"
+    ],
+    "retail": [
+      "ROZETKA",
+      "EPICENTR",
+      "ATB",
+      "SILPO",
+      "FORA",
+      "AUCHAN"
+    ],
+    "authentication": [
+      "GOOGLE",
+      "FACEBOOK",
+      "TWITTER",
+      "INSTAGRAM",
+      "TELEGRAM"
+    ],
+    "transport": [
+      "UBER",
+      "BOLT",
+      "UKLON",
+      "UZ",
+      "SKYUP",
+      "MAU"
+    ],
+    "telecom": [
+      "KYIVSTAR",
+      "VODAFONE",
+      "LIFECELL",
+      "LYCAMOBILE"
+    ]
+  },
+  "suspicious_words": {
+    "uk": [
+      "терміново",
+      "заблоковано",
+      "виграли",
+      "безкоштовно",
+      "увага",
+      "негайно",
+      "останній день",
+      "призупинено",
+      "обмежена пропозиція",
+      "підтвердіть",
+      "перейдіть за посиланням",
+      "натисніть тут"
+    ],
+    "ru": [
+      "срочно",
+      "заблокирован",
+      "выиграли",
+      "бесплатно",
+      "внимание",
+      "немедленно",
+      "последний день",
+      "приостановлен",
+      "ограниченное предложение"
+    ],
+    "en": [
+      "urgent",
+      "blocked",
+      "won",
+      "free",
+      "attention",
+      "click here",
+      "immediately",
+      "last day",
+      "suspended",
+      "limited offer",
+      "verify"
+    ]
+  }
+}
