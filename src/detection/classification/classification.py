@@ -4,26 +4,146 @@ import re
 import json
 import logging
 import pickle
+import sqlite3
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
+import time
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import LinearSVC
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_val_score, GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_recall_fscore_support, roc_auc_score
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.base import BaseEstimator, TransformerMixin
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 import seaborn as sns
 import os
+import warnings
+warnings.filterwarnings('ignore')
 
-class SMSCategoryClassifier:
-    """
-    Класифікатор SMS повідомлень за категоріями
-    Навчається на розмічених нормальних даних і класифікує нові повідомлення
-    """
+# Налаштування логування
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] [%(levelname)s] %(message)s'
+)
+
+class TextFeatureExtractor(BaseEstimator, TransformerMixin):
+    """Екстрактор текстових ознак"""
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        features = []
+        for text in X:
+            text_str = str(text)
+            feature_dict = {
+                'length': len(text_str),
+                'word_count': len(text_str.split()),
+                'digit_ratio': sum(c.isdigit() for c in text_str) / max(len(text_str), 1),
+                'upper_ratio': sum(c.isupper() for c in text_str) / max(len(text_str), 1),
+                'has_money': 1 if re.search(r'\d+\s*(?:грн|₴|\$|uah|usd|eur)', text_str.lower()) else 0,
+                'has_phone': 1 if re.search(r'\+?3?8?0?\d{9,}', text_str) else 0,
+                'has_url': 1 if re.search(r'https?://|www\.', text_str.lower()) else 0,
+                'has_code': 1 if re.search(r'(?:код|code|pin|otp).*\d{4,}', text_str.lower()) else 0,
+                'exclamation_count': text_str.count('!'),
+                'question_count': text_str.count('?'),
+                'avg_word_length': np.mean([len(w) for w in text_str.split()]) if text_str.split() else 0
+            }
+            features.append(list(feature_dict.values()))
+        return np.array(features)
+
+class SourceFeatureExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, source_addresses):
+        self.source_addresses = source_addresses
+        self.source_encoder = LabelEncoder()
+
+    def fit(self, X, y=None):
+        # створюємо нормалізовану копію
+        self.normalized_addresses = {
+            k: [s.upper() for s in v] for k, v in self.source_addresses.items()
+        }
+
+        unique_sources = set(str(s).upper() for s in X if pd.notna(s))
+        unique_sources.add('OTHER')
+        self.source_encoder.fit(sorted(unique_sources))
+        return self
+
+    def transform(self, X):
+        features = []
+
+        for source in X:
+            source_str = str(source).upper()
+
+            feature_dict = {
+                'source_length': len(source_str),
+                'is_numeric': int(source_str.replace('+', '').isdigit()),
+                'is_short': int(len(source_str) <= 6),
+                'has_digits': int(any(c.isdigit() for c in source_str)),
+                'known_source': int(self._is_known_source(source_str)),
+            }
+
+            encoded_source = self._encode_source(source_str)
+            features.append(list(feature_dict.values()) + [encoded_source])
+
+        return np.array(features)
+
+    def _is_known_source(self, source):
+        return any(source in sources for sources in self.source_addresses.values())
+
+    def _encode_source(self, source):
+        # Перевірка класів
+        if source not in self.source_encoder.classes_:
+            source = 'OTHER'
+        return self.source_encoder.transform([source])[0]
+
+class TextSelector(BaseEstimator, TransformerMixin):
+    """Селектор для вибору конкретної колонки з DataFrame"""
+    
+    def __init__(self, field):
+        self.field = field
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        return X[self.field]
+    
+class TimeFeatureExtractor(BaseEstimator, TransformerMixin):
+    """Екстрактор часових ознак"""
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        features = []
+        for timestamp in X:
+            if isinstance(timestamp, str):
+                dt = pd.to_datetime(timestamp)
+            else:
+                dt = timestamp
+                
+            feature_dict = {
+                'hour': dt.hour,
+                'day_of_week': dt.dayofweek,
+                'is_weekend': 1 if dt.dayofweek >= 5 else 0,
+                'is_night': 1 if dt.hour >= 22 or dt.hour < 6 else 0,
+                'is_business_hours': 1 if 9 <= dt.hour <= 18 and dt.dayofweek < 5 else 0,
+                'hour_sin': np.sin(2 * np.pi * dt.hour / 24),
+                'hour_cos': np.cos(2 * np.pi * dt.hour / 24),
+                'day_sin': np.sin(2 * np.pi * dt.dayofweek / 7),
+                'day_cos': np.cos(2 * np.pi * dt.dayofweek / 7)
+            }
+            features.append(list(feature_dict.values()))
+        return np.array(features)
+
+class OptimizedSMSClassifier:
+    """Оптимізований класифікатор SMS повідомлень"""
     
     def __init__(self, config_path="src/detection/classification/classification_config.json"):
         """Ініціалізація класифікатора"""
@@ -32,38 +152,15 @@ class SMSCategoryClassifier:
         with open(config_path, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
         
-        # Категорії та їх ключові слова
-        self.category_keywords = self.config.get("category_keywords", {})
         self.source_addresses = self.config.get("source_addresses", {})
         self.extended_keywords = self.config.get("extended_keywords", {})
         
-        # Моделі
-        self.models = {
-            'tfidf_nb': Pipeline([
-                ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1, 2), 
-                                         stop_words=None, lowercase=True)),
-                ('classifier', MultinomialNB(alpha=0.1))
-            ]),
-            
-            'tfidf_lr': Pipeline([
-                ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1, 2), 
-                                         stop_words=None, lowercase=True)),
-                ('classifier', LogisticRegression(max_iter=1000, random_state=42))
-            ]),
-            
-            'tfidf_rf': Pipeline([
-                ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1, 2), 
-                                         stop_words=None, lowercase=True)),
-                ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
-            ])
-        }
-        
+        # Ініціалізація компонентів
+        self.label_encoder = LabelEncoder()
         self.best_model = None
-        self.feature_extractor = None
-        self.label_encoder = None
+        self.training_time = None
+        self.model_metrics = {}
         
-        # Налаштування логування
-        logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
     
     def preprocess_text(self, text: str) -> str:
@@ -74,426 +171,437 @@ class SMSCategoryClassifier:
         # Приведення до нижнього регістру
         text = text.lower()
         
-        # Видалення зайвих пробілів
+        # Очищення
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # Заміна цифрових послідовностей на токен
-        text = re.sub(r'\d{4,}', 'NUMBERS', text)
-        
-        # Заміна сум грошей на токен
-        text = re.sub(r'\d+\s*(?:грн|₴|\$|usd|eur)', 'MONEY', text)
-        
-        # Заміна номерів телефонів на токен
-        text = re.sub(r'\+?3?8?0[0-9]{9}', 'PHONE', text)
-        
-        # Заміна URL на токен
-        text = re.sub(r'https?://[^\s]+|www\.[^\s]+', 'URL', text)
+        # Нормалізація чисел
+        text = re.sub(r'\b\d{4,}\b', 'LONGNUM', text)
+        text = re.sub(r'\d+\s*(?:грн|₴|uah)', 'MONEY', text)
+        text = re.sub(r'\+?3?8?0?\d{9,}', 'PHONE', text)
+        text = re.sub(r'https?://[^\s]+', 'URL', text)
+        text = re.sub(r'www\.[^\s]+', 'URL', text)
+        text = re.sub(r'\b\d{4,6}\b', 'CODE', text)
         
         return text
     
-    def extract_text_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Екстракція додаткових текстових ознак"""
-        features_df = df.copy()
+    def create_feature_pipeline(self):
+        """Створення пайплайну для екстракції ознак"""
         
-        # Довжинні ознаки
-        features_df['text_length'] = df['message_text'].apply(len)
-        features_df['word_count'] = df['message_text'].apply(lambda x: len(str(x).split()))
-        features_df['avg_word_length'] = df['message_text'].apply(
-            lambda x: np.mean([len(word) for word in str(x).split()]) if str(x).split() else 0
-        )
+        # TF-IDF для тексту
+        tfidf = Pipeline([
+            ('selector', TextSelector('processed_text')),
+            ('vectorizer', TfidfVectorizer(
+                max_features=2000,
+                ngram_range=(1, 3),
+                min_df=3,
+                max_df=0.95,
+                lowercase=True,
+                analyzer='word',
+                token_pattern=r'\b\w+\b'
+            ))
+        ])
         
-        # Символьні ознаки
-        features_df['digit_ratio'] = df['message_text'].apply(
-            lambda x: sum(c.isdigit() for c in str(x)) / max(len(str(x)), 1)
-        )
-        features_df['upper_ratio'] = df['message_text'].apply(
-            lambda x: sum(c.isupper() for c in str(x)) / max(len(str(x)), 1)
-        )
-        features_df['punct_count'] = df['message_text'].apply(
-            lambda x: sum(1 for c in str(x) if c in '.,!?:;-()[]{}')
-        )
+        # Комбінований екстрактор ознак
+        feature_union = FeatureUnion([
+            ('tfidf', tfidf),
+            ('text_features', Pipeline([
+                ('selector', TextSelector('message_text')),
+                ('extractor', TextFeatureExtractor())
+            ])),
+            ('source_features', Pipeline([
+                ('selector', TextSelector('source_addr')),
+                ('extractor', SourceFeatureExtractor(self.source_addresses))
+            ])),
+            ('time_features', Pipeline([
+                ('selector', TextSelector('submit_time')),
+                ('extractor', TimeFeatureExtractor())
+            ]))
+        ])
         
-        # Спеціальні патерни
-        features_df['has_money'] = df['message_text'].apply(
-            lambda x: 1 if re.search(r'\d+\s*(?:грн|₴|\$|usd|eur)', str(x).lower()) else 0
-        )
-        features_df['has_phone'] = df['message_text'].apply(
-            lambda x: 1 if re.search(r'\+?3?8?0[0-9]{9}', str(x)) else 0
-        )
-        features_df['has_url'] = df['message_text'].apply(
-            lambda x: 1 if re.search(r'https?://[^\s]+|www\.[^\s]+', str(x).lower()) else 0
-        )
-        features_df['has_numbers'] = df['message_text'].apply(
-            lambda x: 1 if re.search(r'\d{4,}', str(x)) else 0
-        )
-        
-        return features_df
+        return feature_union
     
-    def extract_source_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Екстракція ознак джерела повідомлення"""
-        features_df = df.copy()
+    def create_models(self):
+        """Створення моделей з оптимізованими гіперпараметрами"""
         
-        # Довжина адреси відправника
-        features_df['source_length'] = df['source_addr'].apply(len)
+        feature_pipeline = self.create_feature_pipeline()
         
-        # Тип адреси (цифровий/текстовий)
-        features_df['source_is_numeric'] = df['source_addr'].apply(lambda x: 1 if str(x).isdigit() else 0)
+        models = {
+            'logistic_regression': {
+                'pipeline': Pipeline([
+                    ('features', feature_pipeline),
+                    ('scaler', StandardScaler(with_mean=False)),
+                    ('classifier', LogisticRegression(random_state=42))
+                ]),
+                'param_grid': {
+                    'features__tfidf__vectorizer__max_features': [1000, 3000],
+                    'classifier__C': [0.01, 0.1, 1, 10],
+                    'classifier__penalty': ['l2'],
+                    'classifier__max_iter': [1000],
+                    'classifier__class_weight': ['balanced']
+                }
+            },
+            'svm': {
+                'pipeline': Pipeline([
+                    ('features', self.create_feature_pipeline()),
+                    ('scaler', StandardScaler(with_mean=False)),
+                    ('classifier', LinearSVC(random_state=42))
+                ]),
+                'param_grid': {
+                    'classifier__C': [0.1, 1, 10],
+                    'classifier__loss': ['hinge', 'squared_hinge'],
+                    'classifier__max_iter': [1000]
+                }
+            }
+        }
         
-        # Відповідність джерела категорії
-        features_df['source_category_match'] = df.apply(
-            lambda row: self._calculate_source_match(row['source_addr'], row['category']), axis=1
-        )
-        
-        return features_df
+        return models
     
-    def _calculate_source_match(self, source_addr: str, category: str) -> float:
-        """Розрахунок відповідності джерела категорії"""
-        if not source_addr or category not in self.source_addresses:
-            return 0.0
-        
-        expected_sources = self.source_addresses[category]
-        source_upper = str(source_addr).upper()
-        
-        # Точне співпадіння
-        if source_upper in [s.upper() for s in expected_sources]:
-            return 1.0
-        
-        # Часткове співпадіння
-        for expected in expected_sources:
-            if expected.upper() in source_upper or source_upper in expected.upper():
-                return 0.7
-        
-        return 0.0
-    
-    def rule_based_prediction(self, text: str, source_addr: str = "") -> str:
-        """Класифікація на основі правил (як fallback)"""
-        text_lower = str(text).lower()
-        source_upper = str(source_addr).upper()
-        
-        # Спочатку перевіряємо джерело
-        for category, sources in self.source_addresses.items():
-            for source in sources:
-                if source.upper() in source_upper:
-                    return category
-        
-        # Потім перевіряємо ключові слова
-        category_scores = {}
-        
-        for category, keywords in self.extended_keywords.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    score += 1
-            category_scores[category] = score
-        
-        # Повертаємо категорію з найвищим скором
-        if category_scores:
-            best_category = max(category_scores, key=category_scores.get)
-            if category_scores[best_category] > 0:
-                return best_category
-        
-        return "marketing"  # За замовчуванням
-    
-    def prepare_training_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    def prepare_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Підготовка даних для навчання"""
+        
         # Фільтруємо тільки нормальні повідомлення
         normal_df = df[~df['is_anomaly']].copy()
         
         # Попередня обробка тексту
         normal_df['processed_text'] = normal_df['message_text'].apply(self.preprocess_text)
         
-        # Екстракція додаткових ознак
-        normal_df = self.extract_text_features(normal_df)
-        normal_df = self.extract_source_features(normal_df)
+        # Видалення рідкісних категорій
+        category_counts = normal_df['category'].value_counts()
+        valid_categories = category_counts[category_counts >= 10].index
+        normal_df = normal_df[normal_df['category'].isin(valid_categories)]
         
-        # Підготовка цільової змінної
-        y = normal_df['category']
+        self.logger.info(f"Підготовлено {len(normal_df)} зразків")
+        self.logger.info(f"Категорії: {list(valid_categories)}")
         
-        self.logger.info(f"Підготовлено {len(normal_df)} зразків для навчання")
-        self.logger.info(f"Розподіл по категоріях:\n{y.value_counts()}")
-        
-        return normal_df, y
+        return normal_df
     
-    def train_models(self, df: pd.DataFrame) -> Dict:
-        """Навчання всіх моделей"""
+    def train_and_optimize(self, df: pd.DataFrame) -> Dict:
+        """Навчання та оптимізація моделей"""
+        
+        start_time = time.time()
         self.logger.info("Початок навчання моделей...")
         
         # Підготовка даних
-        X_df, y = self.prepare_training_data(df)
+        prepared_df = self.prepare_data(df)
         
-        # Основний текст для TF-IDF
-        X_text = X_df['processed_text']
+        # Кодування цільової змінної
+        y = self.label_encoder.fit_transform(prepared_df['category'])
         
         # Розділення на навчальну та тестову вибірки
         X_train, X_test, y_train, y_test = train_test_split(
-            X_text, y, test_size=0.2, random_state=42, stratify=y
+            prepared_df, y, test_size=0.2, random_state=42, stratify=y
         )
         
+        models = self.create_models()
+        best_score = 0
+        best_model_name = None
         results = {}
         
-        # Навчання кожної моделі
-        for model_name, model in self.models.items():
-            self.logger.info(f"Навчання моделі: {model_name}")
+        for model_name, model_config in models.items():
+            self.logger.info(f"\nНавчання моделі: {model_name}")
+            
+            # Grid Search для оптимізації гіперпараметрів
+            grid_search = GridSearchCV(
+                model_config['pipeline'],
+                model_config['param_grid'],
+                cv=5,
+                scoring='f1_weighted',
+                n_jobs=-1,
+                verbose=1
+            )
             
             # Навчання
-            model.fit(X_train, y_train)
+            grid_search.fit(X_train, y_train)
             
-            # Крос-валідація
-            cv_scores = cross_val_score(model, X_train, y_train, cv=5, scoring='accuracy')
+            # Оцінка
+            y_pred = grid_search.predict(X_test)
             
-            # Оцінка на тестовій вибірці
-            test_score = model.score(X_test, y_test)
-            y_pred = model.predict(X_test)
+            # Метрики
+            accuracy = accuracy_score(y_test, y_pred)
+            precision, recall, f1, _ = precision_recall_fscore_support(
+                y_test, y_pred, average='weighted'
+            )
+            
+            # ROC AUC для мультикласової класифікації
+            try:
+                y_pred_proba = grid_search.predict_proba(X_test)
+                roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr')
+            except:
+                roc_auc = None
             
             results[model_name] = {
-                'cv_mean': cv_scores.mean(),
-                'cv_std': cv_scores.std(),
-                'test_score': test_score,
-                'classification_report': classification_report(y_test, y_pred, output_dict=True)
+                'accuracy': accuracy,
+                'precision': precision,
+                'recall': recall,
+                'f1_score': f1,
+                'roc_auc': roc_auc,
+                'best_params': grid_search.best_params_,
+                'classification_report': classification_report(
+                    y_test, y_pred, 
+                    target_names=self.label_encoder.classes_
+                )
             }
             
-            self.logger.info(f"{model_name} - CV: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}, Test: {test_score:.3f}")
+            self.logger.info(f"{model_name} - F1: {f1:.3f}, Accuracy: {accuracy:.3f}")
+            
+            # Оновлення найкращої моделі
+            if f1 > best_score:
+                best_score = f1
+                best_model_name = model_name
+                self.best_model = grid_search
+                self.model_metrics = results[model_name]
         
-        # Вибір найкращої моделі
-        best_model_name = max(results.keys(), key=lambda x: results[x]['test_score'])
-        self.best_model = self.models[best_model_name]
-        
-        self.logger.info(f"Найкраща модель: {best_model_name}")
-        
-        # Повторне навчання найкращої моделі на всіх даних
-        self.best_model.fit(X_text, y)
+        self.training_time = (time.time() - start_time) / 60  # в хвилинах
+        self.logger.info(f"\nНайкраща модель: {best_model_name} (F1: {best_score:.3f})")
+        self.logger.info(f"Час навчання: {self.training_time:.2f} хвилин")
         
         return results
     
-    def predict_category(self, text: str, source_addr: str = "") -> Tuple[str, float]:
+    def predict(self, text: str, source_addr: str, submit_time: str) -> Tuple[str, float]:
         """Передбачення категорії для одного повідомлення"""
-        if self.best_model is None:
-            # Якщо модель не навчена, використовуємо правила
-            return self.rule_based_prediction(text, source_addr), 0.5
         
-        # Попередня обробка
-        processed_text = self.preprocess_text(text)
+        if self.best_model is None:
+            raise ValueError("Модель не навчена")
+        
+        # Створення DataFrame для передбачення
+        data = pd.DataFrame([{
+            'message_text': text,
+            'source_addr': source_addr,
+            'submit_time': submit_time,
+            'processed_text': self.preprocess_text(text)
+        }])
         
         # Передбачення
-        prediction = self.best_model.predict([processed_text])[0]
+        prediction_encoded = self.best_model.predict(data)[0]
+        prediction = self.label_encoder.inverse_transform([prediction_encoded])[0]
         
-        # Ймовірності (якщо модель підтримує)
+        # Ймовірність
         try:
-            probabilities = self.best_model.predict_proba([processed_text])[0]
+            probabilities = self.best_model.predict_proba(data)[0]
             confidence = probabilities.max()
         except:
-            confidence = 0.8  # За замовчуванням
+            confidence = 0.9
         
         return prediction, confidence
     
-    def predict_batch(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Передбачення категорій для датафрейму"""
-        result_df = df.copy()
+    def save_model(self, base_path: str = "models") -> str:
+        """Збереження моделі з таймштампом"""
         
-        if self.best_model is None:
-            # Використовуємо правила
-            result_df['predicted_category'] = df.apply(
-                lambda row: self.rule_based_prediction(row['message_text'], row.get('source_addr', '')), 
-                axis=1
-            )
-            result_df['prediction_confidence'] = 0.5
-        else:
-            # Використовуємо навчену модель
-            processed_texts = df['message_text'].apply(self.preprocess_text)
-            
-            predictions = self.best_model.predict(processed_texts)
-            
-            try:
-                probabilities = self.best_model.predict_proba(processed_texts)
-                confidences = probabilities.max(axis=1)
-            except:
-                confidences = [0.8] * len(predictions)
-            
-            result_df['predicted_category'] = predictions
-            result_df['prediction_confidence'] = confidences
+        os.makedirs(base_path, exist_ok=True)
         
-        return result_df
-    
-    def evaluate_on_anomalies(self, df: pd.DataFrame) -> Dict:
-        """Оцінка роботи класифікатора на аномаліях"""
-        anomaly_df = df[df['is_anomaly']].copy()
+        # Генерація імені файлу з таймштампом
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        filename = f"sms_classifier_{timestamp}.pkl"
+        filepath = os.path.join(base_path, filename)
         
-        if len(anomaly_df) == 0:
-            return {"message": "Немає аномалій для оцінки"}
-        
-        # Передбачення для аномалій
-        predictions_df = self.predict_batch(anomaly_df)
-        
-        # Аналіз розподілу категорій в аномаліях
-        predicted_distribution = predictions_df['predicted_category'].value_counts()
-        confidence_stats = predictions_df['prediction_confidence'].describe()
-        
-        return {
-            'total_anomalies': len(anomaly_df),
-            'predicted_distribution': predicted_distribution.to_dict(),
-            'confidence_stats': confidence_stats.to_dict(),
-            'low_confidence_count': sum(predictions_df['prediction_confidence'] < 0.6)
-        }
-    
-    def save_model(self, filepath: str):
-        """Збереження навченої моделі"""
+        # Збереження моделі
         model_data = {
             'best_model': self.best_model,
-            'config': self.config,
-            'extended_keywords': self.extended_keywords
+            'label_encoder': self.label_encoder,
+            'source_addresses': self.source_addresses,
+            'model_metrics': self.model_metrics,
+            'training_time': self.training_time,
+            'timestamp': timestamp
         }
         
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
         
-        self.logger.info(f"Модель збережено в {filepath}")
+        self.logger.info(f"Модель збережено: {filepath}")
+        return filepath
     
-    def load_model(self, filepath: str):
-        """Завантаження навченої моделі"""
-        with open(filepath, 'rb') as f:
-            model_data = pickle.load(f)
+    def save_to_database(self, filepath: str, db_path: str, training_size: int):
+        """Збереження інформації про модель в БД"""
         
-        self.best_model = model_data['best_model']
-        self.config = model_data['config']
-        self.extended_keywords = model_data['extended_keywords']
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
         
-        self.logger.info(f"Модель завантажено з {filepath}")
+        # Підготовка даних для вставки
+        model_data = {
+            'model_name': 'SMS Category Classifier',
+            'model_type': 'Multiclass Classification',
+            'version': datetime.now().strftime("%Y%m%d_%H%M"),
+            'file_path': filepath,
+            'config_json': json.dumps(self.config),
+            'feature_names': json.dumps([
+                'tfidf', 'text_features', 'source_features', 'time_features'
+            ]),
+            'accuracy': self.model_metrics.get('accuracy'),
+            'precision_score': self.model_metrics.get('precision'),
+            'recall': self.model_metrics.get('recall'),
+            'f1_score': self.model_metrics.get('f1_score'),
+            'roc_auc': self.model_metrics.get('roc_auc'),
+            'training_dataset_size': training_size,
+            'training_duration_minutes': int(self.training_time),
+            'validation_score': self.model_metrics.get('f1_score'),
+            'is_active': 1,
+            'deployment_status': 'ready',
+            'trained_by': 'OptimizedSMSClassifier',
+            'training_notes': f"Best params: {json.dumps(self.best_model.best_params_ if hasattr(self.best_model, 'best_params_') else {})}"
+        }
+        
+        # SQL запит
+        columns = ', '.join(model_data.keys())
+        placeholders = ', '.join(['?' for _ in model_data])
+        query = f"INSERT INTO models ({columns}) VALUES ({placeholders})"
+        
+        cursor.execute(query, list(model_data.values()))
+        conn.commit()
+        conn.close()
+        
+        self.logger.info("Інформація про модель збережена в БД")
     
     def visualize_results(self, results: Dict, df: pd.DataFrame):
-        """Візуалізація результатів"""
-        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        """Візуалізація результатів навчання"""
 
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        
         # 1. Порівняння моделей
         ax = axes[0, 0]
-        model_names = list(results.keys())
-        test_scores = [results[name]['test_score'] for name in model_names]
-        cv_scores = [results[name]['cv_mean'] for name in model_names]
-
-        x = np.arange(len(model_names))
-        width = 0.35
-
-        ax.bar(x - width / 2, cv_scores, width, label='Cross-validation', alpha=0.8)
-        ax.bar(x + width / 2, test_scores, width, label='Test score', alpha=0.8)
-        ax.set_xlabel('Моделі')
-        ax.set_ylabel('Accuracy')
-        ax.set_title('Порівняння моделей')
-        ax.set_xticks(x)
-        ax.set_xticklabels(model_names, rotation=45)
-        ax.legend()
+        metrics_df = pd.DataFrame({
+            model: {
+                'F1-Score': metrics['f1_score'],
+                'Accuracy': metrics['accuracy'],
+                'Precision': metrics['precision'],
+                'Recall': metrics['recall']
+            }
+            for model, metrics in results.items()
+        }).T
+        
+        metrics_df.plot(kind='bar', ax=ax)
+        ax.set_title('Порівняння моделей', fontsize=14)
+        ax.set_ylabel('Значення метрики')
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
 
         # 2. Розподіл категорій
         ax = axes[0, 1]
-        normal_data = df[~df['is_anomaly']]
-        category_counts = normal_data['category'].value_counts()
-        category_counts.plot(kind='bar', ax=ax, color='lightblue')
-        ax.set_title('Розподіл категорій (нормальні дані)')
-        ax.set_xlabel('Категорія')
-        ax.set_ylabel('Кількість')
+        normal_df = df[~df['is_anomaly']].copy()  # Створюємо копію, щоб уникнути попереджень
+        category_dist = normal_df['category'].value_counts().head(10)
+        category_dist.plot(kind='bar', ax=ax, color='skyblue')
+        ax.set_title('Топ-10 категорій', fontsize=14)
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
 
-        # 3. Довжина повідомлень по категоріях
+        # 3. Розподіл по годинах (виправлений блок)
         ax = axes[1, 0]
-        category_lengths = {}
-        for category in normal_data['category'].unique()[:5]:  # Топ-5 категорій
-            lengths = normal_data[normal_data['category'] == category]['message_text'].apply(len)
-            category_lengths[category] = lengths
-
-        ax.boxplot(category_lengths.values(), labels=category_lengths.keys())
-        ax.set_title('Розподіл довжини повідомлень')
-        ax.set_xlabel('Категорія')
-        ax.set_ylabel('Довжина символів')
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
-
-        # 4. Матриця плутанини для найкращої моделі
+        try:
+            # Автовизначення формату дати
+            normal_df['hour'] = pd.to_datetime(
+                normal_df['submit_time'],
+                format='mixed'  # Автоматичне визначення формату
+            ).dt.hour
+        
+            hour_dist = normal_df.groupby(['hour', 'category']).size().unstack(fill_value=0)
+            top_categories = normal_df['category'].value_counts().head(5).index
+            hour_dist[top_categories].plot(ax=ax, kind='line', marker='o')
+            ax.set_title('Розподіл по годинах (топ-5 категорій)', fontsize=14)
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        except Exception as e:
+            ax.text(0.5, 0.5, f'Помилка обробки дат:\n{str(e)}', 
+                ha='center', va='center')
+            self.logger.error(f"Помилка при обробці дат: {e}")
+            
+        # 4. Матриця важливості ознак (якщо доступна)
         ax = axes[1, 1]
-        if self.best_model and len(normal_data) > 100:
-            test_data = normal_data.sample(n=min(200, len(normal_data)))
-            processed_texts = test_data['message_text'].apply(self.preprocess_text)
-            y_true = test_data['category']
-            y_pred = self.best_model.predict(processed_texts)
-
-            top_categories = y_true.value_counts().head(6).index
-            mask = y_true.isin(top_categories)
-            y_true_filtered = y_true[mask]
-            y_pred_filtered = y_pred[mask]
-
-            cm = confusion_matrix(y_true_filtered, y_pred_filtered, labels=top_categories)
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                        xticklabels=top_categories, yticklabels=top_categories, ax=ax)
-            ax.set_title('Матриця плутанини (топ-6 категорій)')
-            ax.set_xlabel('Передбачена категорія')
-            ax.set_ylabel('Справжня категорія')
-            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
-            plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
-
+        if hasattr(self.best_model, 'best_estimator_'):
+            # Спробуємо отримати важливість ознак
+            try:
+                classifier = self.best_model.best_estimator_.named_steps['classifier']
+                if hasattr(classifier, 'feature_importances_'):
+                    importances = classifier.feature_importances_[:20]  # Топ-20
+                    indices = np.argsort(importances)[::-1]
+                    ax.bar(range(len(importances)), importances[indices])
+                    ax.set_title('Топ-20 важливих ознак', fontsize=14)
+                    ax.set_xlabel('Індекс ознаки')
+                    ax.set_ylabel('Важливість')
+                else:
+                    ax.text(0.5, 0.5, 'Важливість ознак недоступна\nдля цієї моделі', 
+                           ha='center', va='center', transform=ax.transAxes)
+            except:
+                ax.text(0.5, 0.5, 'Не вдалося отримати\nважливість ознак', 
+                       ha='center', va='center', transform=ax.transAxes)
+        
         plt.tight_layout()
-
+        
+        # Збереження
         os.makedirs('data/plots/classification', exist_ok=True)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'data/plots/classification/sms_classifier_results_{timestamp}.png'
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+        filename = f'data/plots/classification/optimized_classifier_{timestamp}.png'
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         plt.close()
+        
+        self.logger.info(f"Візуалізація збережена: {filename}")
 
-        self.logger.info(f"Графіки збережено в {filename}")
 
-
-
-# Приклад використання та демонстрація
-if __name__ == "__main__":
+def main():
+    """Основна функція для навчання та збереження класифікатора"""
     
-    def demonstrate_classifier():
-        """Демонстрація роботи класифікатора"""
-        
-        # Ініціалізація
-        classifier = SMSCategoryClassifier()
-        
-        df = pd.read_csv('data/datasets/smpp_weekly_dataset_20250604_223745.csv', encoding='utf-8-sig')
-        print(f"Завантажено {len(df)} записів")
-            
-        # Навчання моделей
-        print("\n=== НАВЧАННЯ МОДЕЛЕЙ ===")
-        results = classifier.train_models(df)
-            
-        # Виведення результатів
-        print("\n=== РЕЗУЛЬТАТИ НАВЧАННЯ ===")
-        for model_name, metrics in results.items():
-            print(f"\n{model_name}:")
-            print(f"  Cross-validation: {metrics['cv_mean']:.3f} ± {metrics['cv_std']:.3f}")
-            print(f"  Test accuracy: {metrics['test_score']:.3f}")
-            
-        # Оцінка на аномаліях
-        print("\n=== ОЦІНКА НА АНОМАЛІЯХ ===")
-        anomaly_results = classifier.evaluate_on_anomalies(df)
-        print(f"Всього аномалій: {anomaly_results.get('total_anomalies', 0)}")
-        print("Розподіл передбачених категорій:")
-        for category, count in anomaly_results.get('predicted_distribution', {}).items():
-            print(f"  {category}: {count}")
-            
-        print(f"Повідомлень з низькою впевненістю (<0.6): {anomaly_results.get('low_confidence_count', 0)}")
-            
-        # Візуалізація
-        classifier.visualize_results(results, df)
-            
-        # Збереження моделі
-        classifier.save_model('models/sms_classifier.pkl')
-            
-        # Тестування на окремих прикладах
-        print("\n=== ТЕСТУВАННЯ НА ПРИКЛАДАХ ===")
-        test_messages = [
-            ("Ваш баланс: 1500 грн. Останній платіж: 250 грн в АТБ", "PRIVAT24"),
-            ("Код підтвердження: 123456. Не повідомляйте його нікому", "AUTH"),
-            ("Ваше замовлення №12345 готове до видачі у відділенні", "NOVAPOSHTA"),
-            ("ТЕРМІННОВО! Ваш рахунок буде заблоковано!", "BANK-FAKE"),
-            ("Запис до лікаря Іванова на завтра о 14:00", "CLINIC")
-        ]
-            
-        for message, source in test_messages:
-            category, confidence = classifier.predict_category(message, source)
-            print(f"Повідомлення: {message[:50]}...")
-            print(f"Джерело: {source}")
-            print(f"Передбачена категорія: {category} (впевненість: {confidence:.2f})")
-            print()
-            
-        
-    # Запуск демонстрації
-    demonstrate_classifier()
+    # Параметри
+    csv_path = 'data/datasets/smpp_weekly_dataset_20250607_053008.csv'
+    db_path = 'data/db/smpp.sqlite'
+    
+    # Завантаження даних
+    print(f"Завантаження даних з {csv_path}...")
+    df = pd.read_csv(csv_path, encoding='utf-16')
+    print(f"Завантажено {len(df)} записів")
+    
+    # Ініціалізація класифікатора
+    classifier = OptimizedSMSClassifier()
+    
+    # Навчання та оптимізація
+    print("\nНавчання моделей...")
+    results = classifier.train_and_optimize(df)
+    
+    # Виведення результатів
+    print("\n=== РЕЗУЛЬТАТИ НАВЧАННЯ ===")
+    for model_name, metrics in results.items():
+        print(f"\n{model_name}:")
+        print(f"  Accuracy: {metrics['accuracy']:.4f}")
+        print(f"  Precision: {metrics['precision']:.4f}")
+        print(f"  Recall: {metrics['recall']:.4f}")
+        print(f"  F1-Score: {metrics['f1_score']:.4f}")
+        if metrics['roc_auc']:
+            print(f"  ROC-AUC: {metrics['roc_auc']:.4f}")
+    
+    # Збереження моделі
+    filepath = classifier.save_model()
+    
+    # Збереження в БД
+    training_size = len(df[~df['is_anomaly']])
+    classifier.save_to_database(filepath, db_path, training_size)
+    
+    # Візуалізація
+    classifier.visualize_results(results, df)
+    
+    # Тестування
+    print("\n=== ТЕСТУВАННЯ НА ПРИКЛАДАХ ===")
+    test_cases = [
+        {
+            'text': "Ваш баланс: 1500 грн. Останній платіж: 250 грн",
+            'source': "PRIVAT24",
+            'time': "2024-01-15 14:30:00"
+        },
+        {
+            'text': "Код підтвердження: 123456",
+            'source': "Google",
+            'time': "2024-01-15 10:00:00"
+        },
+        {
+            'text': "Ваше замовлення готове до отримання",
+            'source': "NOVAPOSHTA",
+            'time': "2024-01-15 18:00:00"
+        }
+    ]
+    
+    for test in test_cases:
+        category, confidence = classifier.predict(
+            test['text'], test['source'], test['time']
+        )
+        print(f"\nТекст: {test['text']}")
+        print(f"Джерело: {test['source']}")
+        print(f"Категорія: {category} (впевненість: {confidence:.2%})")
+    
+    print("\n✅ Класифікатор успішно навчений та збережений!")
+
+
+if __name__ == "__main__":
+    main()

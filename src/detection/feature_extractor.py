@@ -13,7 +13,7 @@ matplotlib.use('Agg')
 import seaborn as sns
 from scipy import stats
 import warnings
-from detection.obfuscation.obfuscation_detector import ObfuscationDetector
+from src.detection.obfuscation.obfuscation_detector import ObfuscationDetector
 
 warnings.filterwarnings('ignore')
 

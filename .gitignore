@@ -11,6 +11,9 @@ data/db/
 # Артефакти моделей
 models/
 
+# Tests
+tests/
+
 # Системні файли
 .DS_Store
 Thumbs.db

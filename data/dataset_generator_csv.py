@@ -615,7 +615,7 @@ if __name__ == "__main__":
     logging.info("Початок генерації тижневого SMPP трафіку...")
     
     df = generator.generate_weekly_traffic(
-        messages_per_day=10000,  
+        messages_per_day=4000,  
         anomaly_rate=0.12       # 12% аномалій
     )
     
