@@ -30,16 +30,33 @@ FEATURE_COLUMNS = [
     "high_recipient_frequency", "suspicious_word_count", "url_count", 
     "suspicious_url", "urgency_score", "message_entropy", "obfuscation_score", 
     "social_engineering", "night_time", "weekend", "business_hours", 
-    "time_category_anomaly", "sender_legitimacy"
+    "time_category_anomaly", "sender_legitimacy", "financial_patterns",
+    "phone_numbers", "source_category_mismatch", "category_time_mismatch",
+    "unusual_sender_pattern", "typosquatting"
 ]
 
+# Категоріальні ознаки (потребують one-hot encoding)
 CATEGORICAL_FEATURES = ["day_of_week", "time_category_anomaly"]
+
+# Бінарні ознаки (0 або 1)
 BINARY_FEATURES = [
     "source_is_numeric", "dest_is_valid", "encoding_issues", "empty_message",
     "excessive_length", "high_sender_frequency", "high_recipient_frequency",
     "suspicious_url", "social_engineering", "night_time", "weekend", 
-    "business_hours", "sender_legitimacy"
+    "business_hours", "sender_legitimacy", "source_category_mismatch",
+    "category_time_mismatch", "unusual_sender_pattern", "typosquatting"
 ]
+
+# Числові ознаки (потребують масштабування)
+NUMERIC_FEATURES = [
+    "hour", "message_length", "source_addr_length", "sender_frequency",
+    "recipient_frequency", "sender_burst", "recipient_burst", 
+    "suspicious_word_count", "url_count", "urgency_score", 
+    "message_entropy", "obfuscation_score", "message_parts",
+    "financial_patterns", "phone_numbers"
+]
+
+# Текстові ознаки для додаткової обробки
 TEXT_FEATURES = ["source_addr", "dest_addr", "message_text", "category"]
 
 # Налаштування логування
@@ -233,6 +250,11 @@ class AdvancedDataPreprocessor:
         logger.info(f"Preprocessing data with shape: {df.shape}")
         df = df.copy()
         
+        # Перевірка наявності всіх необхідних ознак
+        missing_features = [col for col in FEATURE_COLUMNS if col not in df.columns]
+        if missing_features:
+            logger.warning(f"Missing required features: {missing_features}")
+        
         # Обробка пропущених значень для числових колонок
         numeric_columns = df.select_dtypes(include=[np.number]).columns
         df[numeric_columns] = df[numeric_columns].replace([np.inf, -np.inf], np.nan)
@@ -246,23 +268,28 @@ class AdvancedDataPreprocessor:
                 df[col] = df[col].fillna(median_value)
         
         processed_features = []
-        feature_names = []  # Для відстеження порядку ознак
+        feature_names = []
         
-        # 1. Обробка числових features
-        numeric_features = [col for col in FEATURE_COLUMNS if col in df.columns 
-                        and col not in CATEGORICAL_FEATURES + BINARY_FEATURES]
-        if numeric_features:
-            numeric_data = df[numeric_features].values
+        # 1. Обробка числових features (з NUMERIC_FEATURES)
+        numeric_features_present = [col for col in NUMERIC_FEATURES if col in df.columns]
+        if numeric_features_present:
+            numeric_data = df[numeric_features_present].values
             if fit:
                 numeric_scaled = self.scalers['standard'].fit_transform(numeric_data)
-                self.numeric_features_order = numeric_features  # Зберігаємо порядок
+                self.numeric_features_order = numeric_features_present
             else:
-                # Використовуємо збережений порядок
-                numeric_data = df[self.numeric_features_order].values
-                numeric_scaled = self.scalers['standard'].transform(numeric_data)
-            processed_features.append(numeric_scaled)
-            feature_names.extend([f'numeric_{col}' for col in (self.numeric_features_order if not fit else numeric_features)])
-            logger.info(f"Processed {len(numeric_features)} numeric features")
+                # При transform використовуємо той самий порядок
+                if hasattr(self, 'numeric_features_order'):
+                    # Перевіряємо, чи всі збережені features присутні
+                    numeric_data = df[self.numeric_features_order].values
+                    numeric_scaled = self.scalers['standard'].transform(numeric_data)
+                else:
+                    numeric_scaled = np.array([])
+            
+            if numeric_scaled.size > 0:
+                processed_features.append(numeric_scaled)
+                feature_names.extend([f'numeric_{col}' for col in (self.numeric_features_order if not fit else numeric_features_present)])
+                logger.info(f"Processed {len(numeric_features_present)} numeric features")
         
         # 2. Обробка бінарних features
         binary_features_present = [col for col in BINARY_FEATURES if col in df.columns]
@@ -270,28 +297,52 @@ class AdvancedDataPreprocessor:
             self.binary_features_order = binary_features_present
         
         if hasattr(self, 'binary_features_order') and self.binary_features_order:
+            # Перевіряємо наявність всіх бінарних ознак
+            missing_binary = [col for col in self.binary_features_order if col not in df.columns]
+            if missing_binary:
+                logger.warning(f"Missing binary features during transform: {missing_binary}")
+                # Додаємо відсутні колонки з нулями
+                for col in missing_binary:
+                    df[col] = 0
+            
             binary_data = df[self.binary_features_order].fillna(0).values.astype(float)
             processed_features.append(binary_data)
             feature_names.extend([f'binary_{col}' for col in self.binary_features_order])
             logger.info(f"Processed {len(self.binary_features_order)} binary features")
         
         # 3. Обробка категоріальних features
+        if fit:
+            self.categorical_features_fitted = []
+        
         for col in CATEGORICAL_FEATURES:
             if col in df.columns:
-                # Конвертуємо в строки та заповнюємо пропуски
-                col_data = df[col].fillna('unknown').astype(str)
-                
                 if fit:
+                    self.categorical_features_fitted.append(col)
+                    
+                    # Конвертуємо в строки та заповнюємо пропуски
+                    col_data = df[col].fillna('unknown').astype(str)
+                    
                     if col not in self.label_encoders:
                         self.label_encoders[col] = LabelEncoder()
-                    # Додаємо 'unknown' до можливих класів при fit
+                    
+                    # Fit з усіма можливими значеннями плюс 'unknown'
                     unique_values = list(col_data.unique())
                     if 'unknown' not in unique_values:
                         unique_values.append('unknown')
                     self.label_encoders[col].fit(unique_values)
                     encoded = self.label_encoders[col].transform(col_data)
+                    
+                    # One-hot encoding
+                    n_categories = len(self.label_encoders[col].classes_)
+                    one_hot = np.zeros((len(df), n_categories))
+                    one_hot[np.arange(len(df)), encoded] = 1
+                    processed_features.append(one_hot)
+                    logger.info(f"Processed categorical feature {col} with {n_categories} categories")
                 else:
-                    if col in self.label_encoders:
+                    # При transform
+                    if hasattr(self, 'categorical_features_fitted') and col in self.categorical_features_fitted:
+                        col_data = df[col].fillna('unknown').astype(str)
+                        
                         # Transform з обробкою невідомих категорій
                         le = self.label_encoders[col]
                         known_labels = set(le.classes_)
@@ -302,59 +353,15 @@ class AdvancedDataPreprocessor:
                             col_data_safe = col_data_safe.replace('unknown', le.classes_[0])
                         
                         encoded = le.transform(col_data_safe)
-                    else:
-                        continue  # Пропускаємо, якщо не було при тренуванні
-                
-                # One-hot encoding з фіксованою розмірністю
-                n_categories = len(self.label_encoders[col].classes_)
-                one_hot = np.zeros((len(df), n_categories))
-                one_hot[np.arange(len(df)), encoded] = 1
-                processed_features.append(one_hot)
-                feature_names.extend([f'cat_{col}_{i}' for i in range(n_categories)])
-                logger.info(f"Processed categorical feature {col} with {n_categories} categories")
+                        
+                        # One-hot encoding
+                        n_categories = len(le.classes_)
+                        one_hot = np.zeros((len(df), n_categories))
+                        one_hot[np.arange(len(df)), encoded] = 1
+                        processed_features.append(one_hot)
         
-        # 4. Обробка текстових features з фіксованим порядком
-        for text_col in TEXT_FEATURES:
-            if text_col in df.columns:
-                if fit:
-                    # При fit створюємо та зберігаємо scaler для кожної текстової колонки
-                    try:
-                        text_features = self._extract_text_features(df[text_col], text_col)
-                        if text_features.shape[1] > 0:
-                            # Створюємо окремий scaler для цієї колонки
-                            if 'text_scalers' not in self.__dict__:
-                                self.text_scalers = {}
-                            if 'text_feature_names' not in self.__dict__:
-                                self.text_feature_names = {}
-                            
-                            self.text_scalers[text_col] = MinMaxScaler()
-                            text_scaled = self.text_scalers[text_col].fit_transform(text_features.values)
-                            self.text_feature_names[text_col] = list(text_features.columns)
-                            
-                            processed_features.append(text_scaled)
-                            feature_names.extend([f'text_{text_col}_{fname}' for fname in text_features.columns])
-                            logger.info(f"Extracted {text_features.shape[1]} features from {text_col}")
-                    except Exception as e:
-                        logger.warning(f"Could not extract features from {text_col}: {str(e)}")
-                else:
-                    # При transform використовуємо збережені scalers
-                    if hasattr(self, 'text_scalers') and text_col in self.text_scalers:
-                        try:
-                            text_features = self._extract_text_features(df[text_col], text_col)
-                            # Переконуємося, що маємо ті ж самі колонки в тому ж порядку
-                            expected_cols = self.text_feature_names[text_col]
-                            text_features = text_features[expected_cols]
-                            
-                            text_scaled = self.text_scalers[text_col].transform(text_features.values)
-                            processed_features.append(text_scaled)
-                            feature_names.extend([f'text_{text_col}_{fname}' for fname in expected_cols])
-                        except Exception as e:
-                            # Якщо щось пішло не так, додаємо нулі замість ознак
-                            logger.warning(f"Error processing {text_col}, using zeros: {str(e)}")
-                            n_features = len(self.text_feature_names[text_col])
-                            zeros = np.zeros((len(df), n_features))
-                            processed_features.append(zeros)
-                            feature_names.extend([f'text_{text_col}_{fname}' for fname in self.text_feature_names[text_col]])
+        # 4. НЕ обробляємо текстові features для уникнення проблем з розмірністю
+        # Якщо потрібно, їх можна додати з фіксованою кількістю ознак
         
         # Об'єднання всіх features
         if processed_features:
@@ -363,40 +370,28 @@ class AdvancedDataPreprocessor:
             logger.warning("No features were processed!")
             X = np.zeros((len(df), 1))
         
-        # Збереження або перевірка розмірності
-        if fit:
-            self.expected_n_features = X.shape[1]
-            self.expected_feature_names = feature_names
-            logger.info(f"Fit completed. Expected {self.expected_n_features} features")
-        else:
-            if hasattr(self, 'expected_n_features') and X.shape[1] != self.expected_n_features:
-                logger.error(f"Feature dimension mismatch! Expected {self.expected_n_features}, got {X.shape[1]}")
-                logger.error(f"Expected features: {len(self.expected_feature_names)}")
-                logger.error(f"Got features: {len(feature_names)}")
-                # Спробуємо виправити, додавши або видаливши колонки
-                if X.shape[1] < self.expected_n_features:
-                    # Додаємо нулі
-                    padding = np.zeros((X.shape[0], self.expected_n_features - X.shape[1]))
-                    X = np.hstack([X, padding])
-                    logger.info(f"Padded with zeros to match expected dimension")
-                else:
-                    # Обрізаємо
-                    X = X[:, :self.expected_n_features]
-                    logger.info(f"Truncated to match expected dimension")
-        
         logger.info(f"Final preprocessed shape: {X.shape}")
         
         # Збереження статистики
         if fit:
+            self.n_features_fitted = X.shape[1]
             self.feature_stats['n_features'] = X.shape[1]
-            self.feature_stats['expected_dim'] = X.shape[1]
             self.feature_stats['feature_types'] = {
-                'numeric': len(numeric_features),
+                'numeric': len(numeric_features_present),
                 'binary': len(binary_features_present),
-                'categorical': len([c for c in CATEGORICAL_FEATURES if c in df.columns]),
-                'text_derived': sum(len(self.text_feature_names.get(col, [])) 
-                                for col in TEXT_FEATURES if col in self.text_feature_names)
+                'categorical': sum(len(self.label_encoders[col].classes_) for col in self.categorical_features_fitted)
             }
+            self.feature_stats['feature_order'] = {
+                'numeric': self.numeric_features_order,
+                'binary': self.binary_features_order,
+                'categorical': self.categorical_features_fitted
+            }
+            logger.info(f"Fitted preprocessor expects {self.n_features_fitted} features")
+            logger.info(f"Feature breakdown: {self.feature_stats['feature_types']}")
+        else:
+            # Перевірка розмірності при transform
+            if hasattr(self, 'n_features_fitted') and X.shape[1] != self.n_features_fitted:
+                logger.error(f"Feature dimension mismatch! Expected {self.n_features_fitted}, got {X.shape[1]}")
         
         return X
 
