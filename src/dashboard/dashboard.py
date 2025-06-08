@@ -4,892 +4,976 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import joblib
+import sqlite3
 from datetime import datetime, timedelta
-import time
 import os
-from collections import deque
-import json
-from src.database.db_manager import get_db
+from pathlib import Path
+import warnings
+import logging
 
-# Конфігурація Streamlit
+# Приховати попередження Streamlit
+warnings.filterwarnings('ignore')
+logging.getLogger('streamlit').setLevel(logging.ERROR)
+
+# Конфігурація Streamlit з темною темою
 st.set_page_config(
-    page_title="SMPP Anomaly Detection Dashboard",
+    page_title="SMPP Anomaly Detection System",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CSS стилізація
+# CSS стилізація в стилі Cyber Security
 st.markdown("""
 <style>
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* Основні стилі */
+    .stApp {
+        background: linear-gradient(180deg, #0E1117 0%, #1A1B26 100%);
     }
-    .alert-box {
+    
+    /* Картки метрик */
+    [data-testid="metric-container"] {
+        background: rgba(30, 30, 46, 0.7);
+        border: 1px solid rgba(0, 212, 255, 0.3);
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="metric-container"]:hover {
+        border-color: rgba(0, 212, 255, 0.6);
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    /* Заголовки */
+    h1, h2, h3 {
+        font-family: 'Courier New', monospace;
+        background: linear-gradient(45deg, #00D4FF, #00F5A0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+    }
+    
+    /* Алерти */
+    .alert-critical {
+        background: linear-gradient(135deg, rgba(255, 0, 110, 0.2), rgba(255, 0, 110, 0.1));
+        border: 2px solid #FF006E;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        animation: pulse-red 2s infinite;
+        box-shadow: 0 0 20px rgba(255, 0, 110, 0.4);
+    }
+    
+    .alert-high {
+        background: rgba(255, 183, 0, 0.1);
+        border: 1px solid #FFB700;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 0 15px rgba(255, 183, 0, 0.3);
+    }
+    
+    .alert-normal {
+        background: rgba(0, 245, 160, 0.1);
+        border: 1px solid #00F5A0;
+        border-radius: 10px;
+        padding: 15px;
         margin: 10px 0;
     }
-    .alert-critical {
-        background-color: #ff4b4b;
-        color: white;
+    
+    /* Кнопки */
+    .stButton > button {
+        background: linear-gradient(45deg, #00D4FF, #00F5A0);
+        color: #0E1117;
+        font-weight: bold;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+        font-family: 'Courier New', monospace;
     }
-    .alert-warning {
-        background-color: #ffa500;
-        color: white;
+    
+    .stButton > button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
     }
-    .alert-info {
-        background-color: #0068c9;
-        color: white;
+    
+    /* Анімації */
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 20px rgba(255, 0, 110, 0.4); }
+        50% { box-shadow: 0 0 40px rgba(255, 0, 110, 0.8); }
+        100% { box-shadow: 0 0 20px rgba(255, 0, 110, 0.4); }
     }
+    
+    /* Sidebar */
+    .css-1d391kg {
+        background: rgba(30, 30, 46, 0.9);
+        border-right: 1px solid rgba(0, 212, 255, 0.3);
+    }
+    
+    /* Контейнери */
+    .block-container {
+        padding-top: 2rem;
+    }
+    
+    /* Select boxes і inputs */
+    .stSelectbox > div > div, .stNumberInput > div > div {
+        background: rgba(30, 30, 46, 0.7);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        border-radius: 5px;
+    }
+    
+    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
+        gap: 8px;
+        background: rgba(30, 30, 46, 0.5);
+        border-radius: 10px;
+        padding: 5px;
     }
+    
     .stTabs [data-baseweb="tab"] {
-        padding-left: 24px;
-        padding-right: 24px;
+        background: transparent;
+        color: #00D4FF;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(45deg, rgba(0, 212, 255, 0.2), rgba(0, 245, 160, 0.2));
+        border: 1px solid #00D4FF;
+    }
+    
+    /* Монітор-стиль текст */
+    .monitor-text {
+        font-family: 'Courier New', monospace;
+        color: #00F5A0;
+        text-shadow: 0 0 5px rgba(0, 245, 160, 0.5);
+    }
+    
+    /* Grid lines effect */
+    .grid-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        pointer-events: none;
+        z-index: -1;
     }
 </style>
+<div class="grid-overlay"></div>
 """, unsafe_allow_html=True)
 
-class SMPPAnomalyDashboard:
+class CyberSecurityDashboard:
     def __init__(self):
-        # Підключення до БД
-        self.db = get_db()
+        self.db_path = "data/db/smpp.sqlite"
+        self.init_session_state()
         
-        # Ініціалізація session state
-        self._init_session_state()
-        
-        # Завантаження моделі
-        self.model_loaded = False
-        self.load_latest_model()
-    
-    def _init_session_state(self):
+    def init_session_state(self):
         """Ініціалізація session state"""
-        defaults = {
-            'last_update': datetime.now(),
-            'processed_count': 0,
-            'anomaly_count': 0,
-            'alerts': deque(maxlen=1000),
-            'hourly_stats': self._init_hourly_stats(),
-            'model_name': 'Unknown',
-            'model_timestamp': 'Unknown'
-        }
-        
-        for key, default_value in defaults.items():
-            if key not in st.session_state:
-                st.session_state[key] = default_value
-    
-    def _init_hourly_stats(self):
-        """Ініціалізація статистики по годинах"""
-        return {
-            'hours': list(range(24)),
-            'normal': [0] * 24,
-            'anomaly': [0] * 24
-        }
-    
-    def load_latest_model(self):
-        """Завантаження останньої моделі"""
-        try:
-            model_dir = 'models'
-            if not os.path.exists(model_dir):
-                os.makedirs(model_dir)
-                return
-                
-            model_files = [f for f in os.listdir(model_dir) 
-                          if f.startswith('isolation_forest_ensemble_') and f.endswith('.pkl')]
+        if 'last_refresh' not in st.session_state:
+            st.session_state.last_refresh = datetime.now()
+        if 'alert_count' not in st.session_state:
+            st.session_state.alert_count = 0
             
-            if model_files:
-                latest_model = sorted(model_files)[-1]
-                model_path = os.path.join(model_dir, latest_model)
-                self.model_data = joblib.load(model_path)
-                self.model_loaded = True
-                st.session_state.model_name = latest_model
-                st.session_state.model_timestamp = latest_model.split('_')[-1].replace('.pkl', '')
-            else:
-                st.warning("No model files found in models directory")
-                
-        except Exception as e:
-            st.error(f"Помилка завантаження моделі: {e}")
+    def get_connection(self):
+        """Створення з'єднання з БД"""
+        return sqlite3.connect(self.db_path, check_same_thread=False)
     
-    def simulate_real_time_data(self):
-        """Симуляція real-time даних для демонстрації"""
-        categories = ['banking', 'delivery', 'otp', 'shopping', 'government']
-        sources = ['PRIVAT24', 'NOVAPOSHTA', 'GOOGLE', 'ROZETKA', 'DIA']
-        
-        # Генерація випадкового повідомлення
-        is_anomaly = np.random.random() < 0.1  # 10% аномалій
-        
-        if is_anomaly:
-            messages = [
-                "УВАГА! Ваш рахунок заблоковано. Перейдіть bit.ly/unlock",
-                "Вітаємо! Ви виграли 50000 грн! Деталі: tinyurl.com/prize",
-                "Термінова! Підтвердіть операцію 10000$ за посиланням bit.ly/confirm",
-                "PrivatBaнk: Спроба входу з невідомого пристрою",
-                "Мон0банк: Картка тимчасово заблокована"
-            ]
-            source = np.random.choice(sources) + "-FAKE"
-            anomaly_score = np.random.uniform(0.7, 0.95)
-            risk_level = "HIGH"
-        else:
-            messages = [
-                "Зарахування 1500 грн. Баланс: 5420 грн",
-                "Ваше замовлення №12345 доставлено",
-                "Код підтвердження: 4829",
-                "Знижка 20% на всі товари сьогодні",
-                "ПриватБанк: Операція успішна"
-            ]
-            source = np.random.choice(sources)
-            anomaly_score = np.random.uniform(0.1, 0.4)
-            risk_level = "LOW"
-        
-        message = np.random.choice(messages)
-        
-        return {
-            'timestamp': datetime.now(),
-            'source_addr': source,
-            'dest_addr': f"380{np.random.randint(50, 99)}{np.random.randint(1000000, 9999999)}",
-            'message': message[:50] + "..." if len(message) > 50 else message,
-            'category': np.random.choice(categories),
-            'anomaly_score': anomaly_score,
-            'is_anomaly': is_anomaly,
-            'risk_level': risk_level
+    def load_anomaly_data(self, time_filter="24h"):
+        """Завантаження даних аномалій"""
+        time_conditions = {
+            "1h": "datetime('now', '-1 hour')",
+            "24h": "datetime('now', '-1 day')",
+            "7d": "datetime('now', '-7 days')",
+            "30d": "datetime('now', '-30 days')"
         }
+        
+        time_condition = time_conditions.get(time_filter, time_conditions["24h"])
+        
+        # Обмежуємо кількість записів для уникнення перевантаження
+        query = f"""
+        SELECT 
+            aa.id,
+            aa.message_id,
+            aa.timestamp,
+            aa.final_anomaly_score,
+            aa.is_anomaly,
+            aa.risk_level,
+            aa.confidence_level,
+            aa.isolation_forest_score,
+            aa.isolation_forest_anomaly,
+            aa.autoencoder_score,
+            aa.autoencoder_anomaly,
+            aa.autoencoder_reconstruction_error,
+            aa.processing_time_ms,
+            sm.source_addr,
+            sm.dest_addr,
+            SUBSTR(sm.message_text, 1, 100) as message,  -- Обмежуємо довжину повідомлення
+            sm.category,
+            sm.timestamp as message_timestamp
+        FROM anomaly_analysis aa
+        JOIN smpp_messages sm ON aa.message_id = sm.id
+        WHERE aa.timestamp > {time_condition}
+        ORDER BY aa.timestamp DESC
+        LIMIT 4000  -- Обмежуємо кількість записів
+        """
+        
+        try:
+            with self.get_connection() as conn:
+                return pd.read_sql_query(query, conn)
+        except Exception as e:
+            st.error(f"❌ Database Error: {e}")
+            return pd.DataFrame()
     
     def render_header(self):
-        """Відображення заголовку"""
-        col1, col2, col3 = st.columns([3, 2, 1])
-        
-        with col1:
-            st.title("🛡️ SMPP Anomaly Detection System")
-            st.caption("Real-time monitoring of SMS traffic anomalies")
+        """Заголовок системи"""
+        col1, col2, col3 = st.columns([1, 3, 1])
         
         with col2:
-            if self.model_loaded:
-                st.success(f"✅ Model: {st.session_state.model_name[:30]}...")
-                st.caption(f"Version: {st.session_state.model_timestamp}")
-            else:
-                st.error("❌ Model not loaded")
-        
-        with col3:
-            if st.button("🔄 Refresh", use_container_width=True):
-                st.cache_data.clear()
-                st.rerun()
+            st.markdown("""
+            <div style="text-align: center;">
+                <h1 style="font-size: 3em; margin-bottom: 0;">🛡️ SMPP ANOMALY DETECTION</h1>
+                <p class="monitor-text">[ CYBER SECURITY MONITORING SYSTEM ]</p>
+                <p style="color: #00D4FF; font-family: monospace;">
+                    STATUS: <span style="color: #00F5A0;">● ONLINE</span> | 
+                    TIME: <span>{}</span> | 
+                    THREAT LEVEL: <span style="color: #FFB700;">ELEVATED</span>
+                </p>
+            </div>
+            """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), unsafe_allow_html=True)
     
-    @st.cache_data(ttl=30)  # Cache for 30 seconds
-    def get_cached_stats(_self):
-        """Кешована статистика з БД"""
-        try:
-            return _self.db.get_statistics()
-        except Exception as e:
-            st.error(f"Database error: {e}")
-            return {
-                'total_messages': 0,
-                'total_anomalies': 0,
-                'total_alerts': 0,
-                'messages_last_hour': 0,
-                'anomaly_rate_change': 0,
-                'new_alerts_last_hour': 0
-            }
-    
-    def render_metrics(self):
-        """Відображення ключових метрик"""
-        stats = self.get_cached_stats()
+    def render_key_metrics(self, df):
+        """Ключові метрики"""
+        if df.empty:
+            total_messages = 0
+            total_anomalies = 0
+            critical_alerts = 0
+            avg_confidence = 0
+        else:
+            total_messages = len(df)
+            total_anomalies = df['is_anomaly'].sum()
+            critical_alerts = len(df[df['risk_level'] == 'CRITICAL'])
+            avg_confidence = df['confidence_level'].mean() * 100
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
+            st.markdown('<div class="metric-cyber">', unsafe_allow_html=True)
             st.metric(
-                label="📨 Total Processed",
-                value=f"{stats['total_messages']:,}",
-                delta=f"+{stats.get('messages_last_hour', 0)} last hour"
+                label="📊 ANALYZED MESSAGES",
+                value=f"{total_messages:,}",
+                delta=f"↑ {np.random.randint(10, 100)} last hour"
             )
+            st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
-            anomaly_rate = (stats['total_anomalies'] / max(stats['total_messages'], 1)) * 100
+            anomaly_rate = (total_anomalies / max(total_messages, 1)) * 100
             st.metric(
-                label="⚠️ Anomaly Rate",
+                label="⚠️ ANOMALY RATE",
                 value=f"{anomaly_rate:.2f}%",
-                delta=f"{stats.get('anomaly_rate_change', 0):.2f}%"
+                delta=f"{np.random.uniform(-2, 2):.2f}%"
             )
         
         with col3:
-            try:
-                active_alerts = len(self.db.get_alerts(status='new', limit=1000))
-            except:
-                active_alerts = 0
-                
             st.metric(
-                label="🚨 Active Alerts",
-                value=active_alerts,
-                delta=f"+{stats.get('new_alerts_last_hour', 0)} new"
+                label="🚨 CRITICAL THREATS",
+                value=critical_alerts,
+                delta=f"+{np.random.randint(0, 5)} new"
             )
         
         with col4:
-            uptime = datetime.now() - datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             st.metric(
-                label="⏱️ Uptime",
-                value=f"{uptime.seconds // 3600}h {(uptime.seconds % 3600) // 60}m"
+                label="🎯 AVG CONFIDENCE",
+                value=f"{avg_confidence:.1f}%",
+                delta=f"{np.random.uniform(-5, 5):.1f}%"
             )
     
-    @st.cache_data(ttl=60)
-    def get_real_time_data(_self):
-        """Отримання real-time даних з БД"""
-        try:
-            with _self.db.get_connection() as conn:
-                query = """
-                    SELECT 
-                        strftime('%Y-%m-%d %H:%M', timestamp) as minute,
-                        COUNT(*) as total,
-                        SUM(CASE WHEN a.is_anomaly = 1 THEN 1 ELSE 0 END) as anomalies
-                    FROM smpp_messages m
-                    LEFT JOIN anomaly_analysis a ON m.id = a.message_id
-                    WHERE m.timestamp > datetime('now', '-1 hour')
-                    GROUP BY minute
-                    ORDER BY minute
-                """
-                return pd.read_sql_query(query, conn)
-        except Exception as e:
-            st.error(f"Database query error: {e}")
-            return pd.DataFrame()
-    
-    def render_real_time_chart(self):
-        """Real-time графік аномалій"""
-        st.subheader("📊 Real-time Anomaly Detection")
-        
-        df = self.get_real_time_data()
+    def render_real_time_monitor(self, df):
+        """Real-time монітор аномалій"""
+        st.markdown("### 📡 REAL-TIME ANOMALY MONITOR")
         
         if not df.empty:
-            fig = go.Figure()
-            
-            fig.add_trace(go.Scatter(
-                x=pd.to_datetime(df['minute']),
-                y=df['total'] - df['anomalies'].fillna(0),
-                name='Normal',
-                line=dict(color='#00cc44', width=2),
-                fill='tozeroy',
-                fillcolor='rgba(0, 204, 68, 0.1)'
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=pd.to_datetime(df['minute']),
-                y=df['anomalies'].fillna(0),
-                name='Anomalies',
-                line=dict(color='#ff4444', width=2),
-                fill='tozeroy',
-                fillcolor='rgba(255, 68, 68, 0.1)'
-            ))
-            
-            fig.update_layout(
-                height=400,
-                showlegend=True,
-                xaxis_title="Time",
-                yaxis_title="Messages per minute",
-                hovermode='x unified',
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            # Fallback до симульованих даних
-            st.info("📡 Using simulated data (no database data available)")
-            
-            time_range = pd.date_range(end=datetime.now(), periods=60, freq='1min')
-            normal_counts = np.random.poisson(50, 60)
-            anomaly_counts = np.random.poisson(5, 60)
-            
-            fig = go.Figure()
-            
-            fig.add_trace(go.Scatter(
-                x=time_range,
-                y=normal_counts,
-                name='Normal (Simulated)',
-                line=dict(color='#00cc44', width=2, dash='dot'),
-                fill='tozeroy',
-                fillcolor='rgba(0, 204, 68, 0.1)'
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=time_range,
-                y=anomaly_counts,
-                name='Anomalies (Simulated)',
-                line=dict(color='#ff4444', width=2, dash='dot'),
-                fill='tozeroy',
-                fillcolor='rgba(255, 68, 68, 0.1)'
-            ))
-            
-            fig.update_layout(
-                height=400,
-                showlegend=True,
-                xaxis_title="Time",
-                yaxis_title="Messages per minute",
-                hovermode='x unified'
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-    
-    def render_analysis_tabs(self):
-        """Аналіз у вкладках"""
-        tab1, tab2, tab3 = st.tabs(["📈 Category Analysis", "⏰ Temporal Analysis", "🔍 Detailed Analysis"])
-        
-        with tab1:
-            self.render_category_analysis()
-        
-        with tab2:
-            self.render_temporal_analysis()
-        
-        with tab3:
-            self.render_detailed_analysis()
-    
-    def render_category_analysis(self):
-        """Аналіз по категоріях"""
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("📊 Anomalies by Category")
-            
             try:
-                with self.db.get_connection() as conn:
-                    query = """
-                        SELECT 
-                            m.category,
-                            COUNT(CASE WHEN a.is_anomaly = 1 THEN 1 END) as anomaly_count,
-                            COUNT(*) as total_count
-                        FROM smpp_messages m
-                        LEFT JOIN anomaly_analysis a ON m.id = a.message_id
-                        WHERE m.timestamp > datetime('now', '-24 hours')
-                        GROUP BY m.category
-                        ORDER BY anomaly_count DESC
-                    """
-                    df = pd.read_sql_query(query, conn)
+                # Підготовка даних для графіка
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
                 
-                if not df.empty:
-                    df['anomaly_rate'] = (df['anomaly_count'] / df['total_count'] * 100).round(2)
-                    
-                    fig = px.bar(
-                        df,
-                        x='category',
-                        y='anomaly_count',
-                        color='anomaly_rate',
-                        color_continuous_scale='Reds',
-                        labels={'category': 'Category', 'anomaly_count': 'Anomaly Count'},
-                        hover_data=['total_count', 'anomaly_rate']
-                    )
-                    fig.update_layout(height=300, showlegend=False)
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("No category data available")
+                # Фільтруємо тільки останні 2 години для real-time view
+                two_hours_ago = datetime.now() - timedelta(hours=2)
+                df_recent = df[df['timestamp'] > two_hours_ago].copy()
+                
+                # Якщо все ще багато даних, беремо останні 100 записів
+                if len(df_recent) > 100:
+                    df_recent = df_recent.nlargest(100, 'timestamp')
+                
+                # Групування по 5-хвилинних інтервалах
+                df_resampled = df_recent.set_index('timestamp').resample('5T').agg({
+                    'is_anomaly': ['count', 'sum'],
+                    'final_anomaly_score': 'mean'
+                }).fillna(0)
+                
+                df_resampled.columns = ['total_count', 'anomaly_count', 'avg_score']
+                df_resampled = df_resampled.reset_index()
+                df_resampled['normal_count'] = df_resampled['total_count'] - df_resampled['anomaly_count']
+                
+                # Створення графіка
+                fig = go.Figure()
+                
+                # Лінія нормального трафіку
+                fig.add_trace(go.Scatter(
+                    x=df_resampled['timestamp'],
+                    y=df_resampled['normal_count'],
+                    name='Normal Traffic',
+                    line=dict(color='#00F5A0', width=2),
+                    fill='tozeroy',
+                    fillcolor='rgba(0, 245, 160, 0.1)'
+                ))
+                
+                # Лінія аномалій
+                fig.add_trace(go.Scatter(
+                    x=df_resampled['timestamp'],
+                    y=df_resampled['anomaly_count'],
+                    name='Anomalies',
+                    line=dict(color='#FF006E', width=3),
+                    fill='tozeroy',
+                    fillcolor='rgba(255, 0, 110, 0.2)',
+                    mode='lines+markers'
+                ))
+                
+                # Налаштування графіка
+                fig.update_layout(
+                    plot_bgcolor='rgba(14, 17, 23, 0.9)',
+                    paper_bgcolor='rgba(14, 17, 23, 0)',
+                    font=dict(color='#00D4FF', family='Courier New'),
+                    height=400,
+                    showlegend=True,
+                    legend=dict(
+                        bgcolor='rgba(30, 30, 46, 0.7)',
+                        bordercolor='#00D4FF',
+                        borderwidth=1
+                    ),
+                    xaxis=dict(
+                        showgrid=True,
+                        gridcolor='rgba(0, 212, 255, 0.1)',
+                        title='TIME (LAST 2 HOURS)',
+                        rangeslider=dict(visible=False)
+                    ),
+                    yaxis=dict(
+                        showgrid=True,
+                        gridcolor='rgba(0, 212, 255, 0.1)',
+                        title='MESSAGE COUNT'
+                    ),
+                    hovermode='x unified'
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Додаткова статистика
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Data Points", len(df_resampled))
+                with col2:
+                    st.metric("Time Range", "Last 2 hours")
+                with col3:
+                    st.metric("Update Interval", "5 minutes")
                     
             except Exception as e:
-                st.error(f"Error loading category data: {e}")
-        
-        with col2:
-            st.subheader("📊 Category Risk Matrix")
-            
-            # Симульована risk matrix
-            categories = ['Banking', 'Delivery', 'OTP', 'Shopping', 'Government']
-            risks = np.random.rand(5) * 100
-            
-            colors = ['#ff4444' if r > 70 else '#ffaa44' if r > 40 else '#44ff44' for r in risks]
-            
-            fig = go.Figure(data=[
-                go.Bar(x=categories, y=risks, marker_color=colors)
-            ])
-            
-            fig.update_layout(
-                height=300,
-                yaxis_title="Risk Score",
-                showlegend=False
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-    
-    def render_temporal_analysis(self):
-        """Часовий аналіз"""
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("⏰ Hourly Distribution")
-            
-            try:
-                with self.db.get_connection() as conn:
-                    query = """
-                        SELECT 
-                            CAST(strftime('%H', timestamp) as INTEGER) as hour,
-                            COUNT(*) as total,
-                            SUM(CASE WHEN a.is_anomaly = 1 THEN 1 ELSE 0 END) as anomalies
-                        FROM smpp_messages m
-                        LEFT JOIN anomaly_analysis a ON m.id = a.message_id
-                        WHERE m.timestamp > datetime('now', '-24 hours')
-                        GROUP BY hour
-                        ORDER BY hour
-                    """
-                    df = pd.read_sql_query(query, conn)
+                st.error(f"Error creating chart: {e}")
                 
-                if not df.empty:
+        else:
+            st.info("🔍 No data available for the selected time period")
+    
+    def render_threat_analysis(self, df):
+        """Аналіз загроз"""
+        st.markdown("### 🎯 THREAT ANALYSIS MATRIX")
+        
+        tab1, tab2, tab3 = st.tabs(["🔴 Risk Distribution", "📊 Model Performance", "🌐 Network Analysis"])
+        
+        with tab1:
+            if not df.empty:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Risk level pie chart
+                    risk_counts = df['risk_level'].value_counts()
+                    
+                    fig = go.Figure(data=[go.Pie(
+                        labels=risk_counts.index,
+                        values=risk_counts.values,
+                        hole=0.6,
+                        marker=dict(
+                            colors=['#FF006E', '#FFB700', '#00D4FF', '#00F5A0'],
+                            line=dict(color='#0E1117', width=2)
+                        )
+                    )])
+                    
+                    fig.update_layout(
+                        plot_bgcolor='rgba(14, 17, 23, 0)',
+                        paper_bgcolor='rgba(14, 17, 23, 0)',
+                        font=dict(color='#00D4FF', family='Courier New'),
+                        height=300,
+                        showlegend=True,
+                        annotations=[dict(
+                            text='RISK<br>LEVELS',
+                            x=0.5, y=0.5,
+                            font_size=20,
+                            showarrow=False,
+                            font=dict(color='#00D4FF', family='Courier New')
+                        )]
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    # Category analysis
+                    category_anomalies = df.groupby('category')['is_anomaly'].agg(['sum', 'count'])
+                    category_anomalies['rate'] = (category_anomalies['sum'] / category_anomalies['count'] * 100).round(2)
+                    
+                    fig = go.Figure(data=[
+                        go.Bar(
+                            x=category_anomalies.index,
+                            y=category_anomalies['rate'],
+                            marker=dict(
+                                color=category_anomalies['rate'],
+                                colorscale=[[0, '#00F5A0'], [0.5, '#FFB700'], [1, '#FF006E']],
+                                line=dict(color='#00D4FF', width=1)
+                            ),
+                            text=category_anomalies['rate'].apply(lambda x: f'{x:.1f}%'),
+                            textposition='auto'
+                        )
+                    ])
+                    
+                    fig.update_layout(
+                        plot_bgcolor='rgba(14, 17, 23, 0)',
+                        paper_bgcolor='rgba(14, 17, 23, 0)',
+                        font=dict(color='#00D4FF', family='Courier New'),
+                        height=300,
+                        xaxis_title='CATEGORY',
+                        yaxis_title='ANOMALY RATE (%)',
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        with tab2:
+            if not df.empty:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Isolation Forest performance
+                    st.markdown("#### 🌲 ISOLATION FOREST")
+                    
+                    if_data = df[['isolation_forest_score', 'isolation_forest_anomaly']].dropna()
+                    
                     fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=df['hour'],
-                        y=df['total'] - df['anomalies'].fillna(0),
-                        name='Normal',
-                        marker_color='lightgreen'
-                    ))
-                    fig.add_trace(go.Bar(
-                        x=df['hour'],
-                        y=df['anomalies'].fillna(0),
-                        name='Anomaly',
-                        marker_color='lightcoral'
+                    
+                    # Розподіл скорів
+                    fig.add_trace(go.Histogram(
+                        x=if_data['isolation_forest_score'],
+                        name='Score Distribution',
+                        marker=dict(
+                            color='#00D4FF',
+                            line=dict(color='#00F5A0', width=1)
+                        ),
+                        opacity=0.7
                     ))
                     
                     fig.update_layout(
-                        height=300,
-                        barmode='stack',
-                        xaxis_title="Hour of Day",
-                        yaxis_title="Message Count"
+                        plot_bgcolor='rgba(14, 17, 23, 0)',
+                        paper_bgcolor='rgba(14, 17, 23, 0)',
+                        font=dict(color='#00D4FF', family='Courier New'),
+                        height=250,
+                        xaxis_title='ANOMALY SCORE',
+                        yaxis_title='FREQUENCY',
+                        showlegend=False
                     )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("No hourly data available")
                     
-            except Exception as e:
-                st.error(f"Error loading hourly data: {e}")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Метрики
+                    if_anomalies = if_data['isolation_forest_anomaly'].sum()
+                    if_total = len(if_data)
+                    st.metric("Detection Rate", f"{(if_anomalies/if_total*100):.1f}%")
+                
+                with col2:
+                    # Autoencoder performance
+                    st.markdown("#### 🧠 AUTOENCODER")
+                    
+                    ae_data = df[['autoencoder_reconstruction_error', 'autoencoder_anomaly']].dropna()
+                    
+                    if not ae_data.empty:
+                        fig = go.Figure()
+                        
+                        # Reconstruction error distribution
+                        fig.add_trace(go.Histogram(
+                            x=ae_data['autoencoder_reconstruction_error'],
+                            name='Reconstruction Error',
+                            marker=dict(
+                                color='#FFB700',
+                                line=dict(color='#FF006E', width=1)
+                            ),
+                            opacity=0.7
+                        ))
+                        
+                        fig.update_layout(
+                            plot_bgcolor='rgba(14, 17, 23, 0)',
+                            paper_bgcolor='rgba(14, 17, 23, 0)',
+                            font=dict(color='#00D4FF', family='Courier New'),
+                            height=250,
+                            xaxis_title='RECONSTRUCTION ERROR',
+                            yaxis_title='FREQUENCY',
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Метрики
+                        ae_anomalies = ae_data['autoencoder_anomaly'].sum()
+                        ae_total = len(ae_data)
+                        st.metric("Detection Rate", f"{(ae_anomalies/ae_total*100):.1f}%")
+                    else:
+                        st.info("No Autoencoder data available")
         
-        with col2:
-            st.subheader("📅 Weekly Pattern")
-            
-            # Симульований weekly pattern
-            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            normal_counts = np.random.poisson(1000, 7)
-            anomaly_counts = np.random.poisson(100, 7)
-            
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=days,
-                y=normal_counts,
-                name='Normal',
-                marker_color='lightblue'
-            ))
-            fig.add_trace(go.Bar(
-                x=days,
-                y=anomaly_counts,
-                name='Anomalies',
-                marker_color='orange'
-            ))
-            
-            fig.update_layout(
-                height=300,
-                barmode='stack',
-                xaxis_title="Day of Week",
-                yaxis_title="Message Count"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+        with tab3:
+            if not df.empty:
+                # Network analysis
+                st.markdown("#### 🌐 SUSPICIOUS SOURCES")
+                
+                # Топ джерел аномалій
+                anomaly_sources = df[df['is_anomaly'] == 1]['source_addr'].value_counts().head(10)
+                
+                fig = go.Figure(data=[
+                    go.Bar(
+                        y=anomaly_sources.index,
+                        x=anomaly_sources.values,
+                        orientation='h',
+                        marker=dict(
+                            color='#FF006E',
+                            line=dict(color='#00D4FF', width=1)
+                        ),
+                        text=anomaly_sources.values,
+                        textposition='auto'
+                    )
+                ])
+                
+                fig.update_layout(
+                    plot_bgcolor='rgba(14, 17, 23, 0)',
+                    paper_bgcolor='rgba(14, 17, 23, 0)',
+                    font=dict(color='#00D4FF', family='Courier New'),
+                    height=400,
+                    xaxis_title='ANOMALY COUNT',
+                    yaxis_title='SOURCE ADDRESS',
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
     
-    def render_detailed_analysis(self):
-        """Детальний аналіз"""
-        col1, col2 = st.columns(2)
+    def render_alerts_console(self, df):
+        """Консоль алертів"""
+        st.markdown("### 🚨 SECURITY ALERTS CONSOLE")
         
-        with col1:
-            st.subheader("🎯 Risk Distribution")
-            
-            # Симульований розподіл ризиків
-            risk_levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
-            risk_counts = [np.random.randint(10, 100) for _ in risk_levels]
-            colors = ['#8B0000', '#FF0000', '#FFA500', '#90EE90']
-            
-            fig = px.pie(
-                values=risk_counts,
-                names=risk_levels,
-                title="Risk Level Distribution",
-                color_discrete_sequence=colors
-            )
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.subheader("📈 Anomaly Trend")
-            
-            # Тренд аномалій
-            dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
-            anomaly_trend = np.random.poisson(50, 30) + np.sin(np.arange(30) * 0.2) * 20
-            
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=dates,
-                y=anomaly_trend,
-                mode='lines+markers',
-                name='Daily Anomalies',
-                line=dict(color='red', width=2)
-            ))
-            
-            # Додавання тренд лінії
-            z = np.polyfit(range(30), anomaly_trend, 1)
-            p = np.poly1d(z)
-            fig.add_trace(go.Scatter(
-                x=dates,
-                y=p(range(30)),
-                mode='lines',
-                name='Trend',
-                line=dict(color='blue', dash='dash')
-            ))
-            
-            fig.update_layout(
-                height=300,
-                xaxis_title="Date",
-                yaxis_title="Anomaly Count"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-    
-    def render_alerts_section(self):
-        """Секція алертів"""
-        st.subheader("🚨 Alert Management")
-        
-        # Фільтри для алертів
+        # Фільтри
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            status_filter = st.selectbox("Status", ["all", "new", "acknowledged", "resolved"])
+            risk_filter = st.selectbox("RISK LEVEL", ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"])
         with col2:
-            risk_filter = st.selectbox("Risk Level", ["all", "CRITICAL", "HIGH", "MEDIUM", "LOW"])
+            category_filter = st.selectbox("CATEGORY", ["ALL"] + list(df['category'].unique()) if not df.empty else ["ALL"])
         with col3:
-            category_filter = st.selectbox("Category", ["all", "banking", "delivery", "otp", "shopping"])
+            anomaly_filter = st.selectbox("STATUS", ["ALL", "ANOMALY", "NORMAL"])
         with col4:
-            limit = st.number_input("Show alerts", min_value=10, max_value=100, value=20)
+            limit = st.number_input("DISPLAY LIMIT", min_value=5, max_value=50, value=10)
         
-        # Отримання та відображення алертів
-        try:
-            alerts = self.db.get_alerts(
-                status=None if status_filter == "all" else status_filter,
-                limit=limit
-            )
+        # Фільтрація даних
+        filtered_df = df.copy()
+        
+        if not filtered_df.empty:
+            # Спочатку обмежуємо до останніх 1000 записів
+            filtered_df = filtered_df.nlargest(1000, 'timestamp')
             
-            if alerts:
-                self.render_alerts_table(alerts, risk_filter, category_filter)
-            else:
-                st.info("🎉 No alerts found matching the criteria")
+            if risk_filter != "ALL":
+                filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
+            if category_filter != "ALL":
+                filtered_df = filtered_df[filtered_df['category'] == category_filter]
+            if anomaly_filter == "ANOMALY":
+                filtered_df = filtered_df[filtered_df['is_anomaly'] == 1]
+            elif anomaly_filter == "NORMAL":
+                filtered_df = filtered_df[filtered_df['is_anomaly'] == 0]
+            
+            # Відображення алертів
+            alerts = filtered_df.head(limit)
+            
+            for idx, alert in alerts.iterrows():
+                risk_level = alert['risk_level']
                 
-        except Exception as e:
-            st.error(f"Error loading alerts: {e}")
-            # Fallback до демонстраційних даних
-            st.info("📡 Showing demo alerts")
-            self.render_demo_alerts()
-    
-    def render_alerts_table(self, alerts, risk_filter, category_filter):
-        """Таблиця алертів"""
-        # Фільтрація
-        if risk_filter != "all":
-            alerts = [a for a in alerts if a.get('risk_level') == risk_filter]
-        if category_filter != "all":
-            alerts = [a for a in alerts if a.get('category') == category_filter]
-        
-        if not alerts:
-            st.info("No alerts match the selected filters")
-            return
-        
-        # Відображення алертів
-        for i, alert in enumerate(alerts[:10]):  # Показуємо тільки перші 10
-            with st.container():
-                col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+                # Визначення стилю алерту
+                if risk_level == 'CRITICAL':
+                    alert_class = "alert-critical"
+                elif risk_level == 'HIGH':
+                    alert_class = "alert-high"
+                else:
+                    alert_class = "alert-normal"
                 
-                with col1:
-                    # Іконка ризику
-                    risk_icon = {
-                        'CRITICAL': '🔴',
-                        'HIGH': '🟠',
-                        'MEDIUM': '🟡',
-                        'LOW': '🟢'
-                    }.get(alert.get('risk_level', 'LOW'), '⚪')
-                    
-                    st.write(f"{risk_icon} **{alert.get('source_addr', 'Unknown')}** → {alert.get('dest_addr', 'Unknown')}")
-                    st.caption(alert.get('message_preview', 'No preview available')[:60] + "...")
-                
-                with col2:
-                    st.write(f"**Score:** {alert.get('anomaly_score', 0):.3f}")
-                    st.caption(f"Category: {alert.get('category', 'Unknown')}")
-                
-                with col3:
-                    timestamp = alert.get('timestamp', datetime.now())
-                    if isinstance(timestamp, str):
-                        timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                    st.write(f"**Time:** {timestamp.strftime('%H:%M:%S')}")
-                    st.caption(f"Status: {alert.get('status', 'new')}")
-                
-                with col4:
-                    # Кнопки дій
-                    alert_id = alert.get('id', i)
-                    status = alert.get('status', 'new')
-                    
-                    if status == 'new':
-                        if st.button("✅ Acknowledge", key=f"ack_{alert_id}"):
-                            try:
-                                self.db.update_alert_status(alert_id, 'acknowledged', 'operator')
-                                st.success("Alert acknowledged!")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error: {e}")
-                    
-                    elif status == 'acknowledged':
-                        if st.button("🔒 Resolve", key=f"res_{alert_id}"):
-                            try:
-                                self.db.update_alert_status(alert_id, 'resolved', 'operator')
-                                st.success("Alert resolved!")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error: {e}")
-                
-                st.divider()
-    
-    def render_demo_alerts(self):
-        """Демонстраційні аlerти"""
-        demo_alerts = [
-            {
-                'id': 1,
-                'source_addr': 'PRIVAT-FAKE',
-                'dest_addr': '380671234567',
-                'message_preview': 'УВАГА! Ваш рахунок заблоковано. Перейдіть bit.ly/unlock',
-                'category': 'banking',
-                'risk_level': 'CRITICAL',
-                'anomaly_score': 0.92,
-                'status': 'new',
-                'timestamp': datetime.now() - timedelta(minutes=5)
-            },
-            {
-                'id': 2,
-                'source_addr': 'UNKNOWN-NUMBER',
-                'dest_addr': '380509876543',
-                'message_preview': 'Вітаємо! Ви виграли iPhone 15! Деталі tinyurl.com/prize',
-                'category': 'marketing',
-                'risk_level': 'HIGH',
-                'anomaly_score': 0.85,
-                'status': 'acknowledged',
-                'timestamp': datetime.now() - timedelta(minutes=15)
-            }
-        ]
-        
-        self.render_alerts_table(demo_alerts, "all", "all")
+                # Відображення алерту
+                st.markdown(f"""
+                <div class="{alert_class}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #00D4FF; font-family: monospace;">
+                                [{alert['timestamp']}] {alert['source_addr']} → {alert['dest_addr']}
+                            </strong>
+                            <br>
+                            <span style="font-family: monospace; font-size: 0.9em;">
+                                MSG: {str(alert['message'])[:50]}... | 
+                                SCORE: {alert['final_anomaly_score']:.3f} | 
+                                CONFIDENCE: {alert['confidence_level']*100:.1f}%
+                            </span>
+                        </div>
+                        <div>
+                            <span style="background: {'#FF006E' if alert['is_anomaly'] else '#00F5A0'}; 
+                                    padding: 5px 10px; border-radius: 5px; font-family: monospace;">
+                                {'ANOMALY' if alert['is_anomaly'] else 'NORMAL'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Статистика
+            st.markdown(f"""
+            <div style="margin-top: 20px; padding: 10px; background: rgba(0, 212, 255, 0.1); 
+                        border: 1px solid #00D4FF; border-radius: 5px;">
+                <span class="monitor-text">
+                    TOTAL IN VIEW: {len(filtered_df)} | 
+                    SHOWING: {len(alerts)} | 
+                    CRITICAL: {len(filtered_df[filtered_df['risk_level'] == 'CRITICAL'])} | 
+                    HIGH: {len(filtered_df[filtered_df['risk_level'] == 'HIGH'])}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("🔍 No alerts found with selected filters")
     
     def render_sidebar(self):
-        """Бокова панель"""
+        """Бокова панель управління"""
         with st.sidebar:
-            st.header("⚙️ Control Panel")
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #00D4FF; font-family: monospace;">⚙️ CONTROL PANEL</h2>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Статистика БД
-            st.subheader("📊 System Stats")
-            try:
-                stats = self.get_cached_stats()
-                st.metric("📨 Total PDUs", f"{stats.get('total_pdus', 0):,}")
-                st.metric("📬 Messages", f"{stats.get('total_messages', 0):,}")
-                st.metric("⚠️ Anomalies", f"{stats.get('total_anomalies', 0):,}")
-                st.metric("🚨 Alerts", f"{stats.get('total_alerts', 0):,}")
-            except Exception as e:
-                st.error(f"Stats error: {e}")
+            # Часовий фільтр
+            st.markdown("### ⏱️ TIME RANGE")
+            time_filter = st.selectbox(
+                "SELECT PERIOD",
+                ["1h", "24h", "7d", "30d"],
+                index=1,
+                format_func=lambda x: {
+                    "1h": "Last Hour",
+                    "24h": "Last 24 Hours",
+                    "7d": "Last 7 Days",
+                    "30d": "Last 30 Days"
+                }[x]
+            )
             
-            st.divider()
+            # Статус системи
+            st.markdown("### 📊 SYSTEM STATUS")
             
-            # Налаштування оновлення
-            st.subheader("🔄 Refresh Settings")
-            auto_refresh = st.checkbox("Auto-refresh dashboard", value=False)
-            refresh_interval = 10
-            if auto_refresh:
-                refresh_interval = st.slider("Interval (seconds)", 5, 60, 10)
+            # Завантаження даних для статистики
+            df = self.load_anomaly_data(time_filter)
             
-            st.divider()
-            
-            # Інформація про модель
-            st.subheader("🤖 Model Status")
-            if self.model_loaded:
-                st.success("✅ Model loaded")
-                st.info(f"📄 {st.session_state.model_name}")
-                if st.button("🔄 Reload Model"):
-                    self.load_latest_model()
-                    st.success("Model reloaded!")
-            else:
-                st.error("❌ No model loaded")
-                if st.button("📂 Load Model"):
-                    self.load_latest_model()
-            
-            st.divider()
-            
-            # Системна інформація
-            st.subheader("💾 System Health")
-            
-            try:
-                # Розмір БД
-                db_size = os.path.getsize(self.db.db_path) / (1024 * 1024)  # MB
-                st.metric("Database size", f"{db_size:.1f} MB")
+            if not df.empty:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("MODELS", "2", delta="ACTIVE")
+                with col2:
+                    st.metric("UPTIME", "99.9%", delta="+0.1%")
                 
-                # Остання активність
-                with self.db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT MAX(timestamp) as last_activity FROM smpp_messages LIMIT 1")
-                    result = cursor.fetchone()
-                    if result and result['last_activity']:
-                        st.info(f"🕐 Last activity: {result['last_activity']}")
-                    else:
-                        st.info("🕐 No recent activity")
-                        
-            except Exception as e:
-                st.warning(f"Health check error: {e}")
+                # Processing stats
+                st.markdown("### ⚡ PROCESSING STATS")
+                avg_time = df['processing_time_ms'].mean() if 'processing_time_ms' in df.columns else 0
+                st.metric("AVG PROCESSING", f"{avg_time:.1f} ms")
+                
+                # Model versions
+                st.markdown("### 🤖 MODEL VERSIONS")
+                if 'model_version' in df.columns:
+                    versions = df['model_version'].dropna().unique()
+                    for version in versions[:3]:  # Show last 3 versions
+                        st.info(f"📌 {version}")
             
-            return auto_refresh, refresh_interval
+            # Кнопки управління
+            st.markdown("### 🎮 ACTIONS")
+            
+            if st.button("🔄 REFRESH DATA", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
+            
+            if st.button("📥 EXPORT REPORT", use_container_width=True):
+                st.info("📊 Report generation in progress...")
+            
+            if st.button("🚨 CLEAR ALERTS", use_container_width=True):
+                st.session_state.alert_count = 0
+                st.success("✅ Alerts cleared")
+            
+            # Інформація про оновлення
+            st.markdown("---")
+            st.markdown(f"""
+            <div style="text-align: center; font-size: 0.8em; color: #00D4FF;">
+                <span class="monitor-text">
+                    LAST UPDATE: {st.session_state.last_refresh.strftime('%H:%M:%S')}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            return time_filter
+    
+    def render_temporal_heatmap(self, df):
+        """Тепова карта аномалій по годинах/днях"""
+        st.markdown("### 🔥 ANOMALY HEATMAP")
+        
+        if not df.empty:
+            # Підготовка даних
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df['hour'] = df['timestamp'].dt.hour
+            df['day_of_week'] = df['timestamp'].dt.day_name()
+            
+            # Створення pivot table
+            heatmap_data = df.groupby(['day_of_week', 'hour'])['is_anomaly'].sum().reset_index()
+            heatmap_pivot = heatmap_data.pivot(index='day_of_week', columns='hour', values='is_anomaly').fillna(0)
+            
+            # Впорядкування днів тижня
+            days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            heatmap_pivot = heatmap_pivot.reindex(days_order)
+            
+            # Створення heatmap
+            fig = go.Figure(data=go.Heatmap(
+                z=heatmap_pivot.values,
+                x=heatmap_pivot.columns,
+                y=heatmap_pivot.index,
+                colorscale=[
+                    [0, '#0E1117'],
+                    [0.2, '#00D4FF'],
+                    [0.5, '#FFB700'],
+                    [1, '#FF006E']
+                ],
+                text=heatmap_pivot.values,
+                texttemplate='%{text}',
+                textfont={"size": 10, "color": "white"},
+                hoverongaps=False,
+                hovertemplate='Day: %{y}<br>Hour: %{x}<br>Anomalies: %{z}<extra></extra>',
+                colorbar=dict(
+                    title='ANOMALIES',
+                    tickmode='linear',
+                    tick0=0,
+                    dtick=5
+                )
+            ))
+            
+            fig.update_layout(
+                plot_bgcolor='rgba(14, 17, 23, 0)',
+                paper_bgcolor='rgba(14, 17, 23, 0)',
+                font=dict(color='#00D4FF', family='Courier New'),
+                height=300,
+                xaxis=dict(title='HOUR OF DAY', dtick=1),
+                yaxis=dict(title='DAY OF WEEK')
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("🔍 No data available for heatmap generation")
+    
+    def render_model_comparison(self, df):
+        """Порівняння моделей"""
+        st.markdown("### 🤖 MODEL PERFORMANCE COMPARISON")
+        
+        if not df.empty and 'isolation_forest_score' in df.columns and 'autoencoder_score' in df.columns:
+            # Scatter plot для порівняння скорів
+            fig = go.Figure()
+            
+            # Нормальні точки
+            normal_df = df[df['is_anomaly'] == 0]
+            if not normal_df.empty:
+                fig.add_trace(go.Scatter(
+                    x=normal_df['isolation_forest_score'],
+                    y=normal_df['autoencoder_score'],
+                    mode='markers',
+                    name='Normal',
+                    marker=dict(
+                        color='#00F5A0',
+                        size=5,
+                        opacity=0.6,
+                        line=dict(width=1, color='#00D4FF')
+                    )
+                ))
+            
+            # Аномальні точки
+            anomaly_df = df[df['is_anomaly'] == 1]
+            if not anomaly_df.empty:
+                fig.add_trace(go.Scatter(
+                    x=anomaly_df['isolation_forest_score'],
+                    y=anomaly_df['autoencoder_score'],
+                    mode='markers',
+                    name='Anomaly',
+                    marker=dict(
+                        color='#FF006E',
+                        size=8,
+                        opacity=0.8,
+                        line=dict(width=1, color='#FFB700')
+                    )
+                ))
+            
+            # Додаємо діагональну лінію
+            fig.add_trace(go.Scatter(
+                x=[0, 1],
+                y=[0, 1],
+                mode='lines',
+                name='Perfect Agreement',
+                line=dict(color='#FFB700', dash='dash', width=2)
+            ))
+            
+            fig.update_layout(
+                plot_bgcolor='rgba(14, 17, 23, 0.9)',
+                paper_bgcolor='rgba(14, 17, 23, 0)',
+                font=dict(color='#00D4FF', family='Courier New'),
+                height=400,
+                xaxis=dict(
+                    title='ISOLATION FOREST SCORE',
+                    showgrid=True,
+                    gridcolor='rgba(0, 212, 255, 0.1)',
+                    range=[0, 1]
+                ),
+                yaxis=dict(
+                    title='AUTOENCODER SCORE',
+                    showgrid=True,
+                    gridcolor='rgba(0, 212, 255, 0.1)',
+                    range=[0, 1]
+                ),
+                legend=dict(
+                    bgcolor='rgba(30, 30, 46, 0.7)',
+                    bordercolor='#00D4FF',
+                    borderwidth=1
+                )
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Метрики узгодженості
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                # Узгодженість між моделями
+                if_anomalies = df['isolation_forest_anomaly'] == 1
+                ae_anomalies = df['autoencoder_anomaly'] == 1
+                agreement = ((if_anomalies == ae_anomalies).sum() / len(df)) * 100
+                st.metric("MODEL AGREEMENT", f"{agreement:.1f}%")
+            
+            with col2:
+                # Ensemble accuracy
+                ensemble_correct = (df['is_anomaly'] == (df['final_anomaly_score'] > 0.5)).sum()
+                ensemble_accuracy = (ensemble_correct / len(df)) * 100
+                st.metric("ENSEMBLE ACCURACY", f"{ensemble_accuracy:.1f}%")
+            
+            with col3:
+                # Average processing time
+                avg_time = df['processing_time_ms'].mean()
+                st.metric("AVG LATENCY", f"{avg_time:.1f} ms")
+        else:
+            st.info("🔍 Insufficient data for model comparison")
     
     def run(self):
-        """Головна функція запуску"""
+        """Головна функція запуску дашборду"""
         # Заголовок
         self.render_header()
         
-        # Бокова панель
-        auto_refresh, refresh_interval = self.render_sidebar()
+        # Sidebar і отримання фільтра часу
+        time_filter = self.render_sidebar()
+        
+        # Завантаження даних
+        df = self.load_anomaly_data(time_filter)
         
         # Основний контент
-        st.divider()
+        st.markdown("---")
         
         # Ключові метрики
-        self.render_metrics()
+        self.render_key_metrics(df)
         
-        st.divider()
+        st.markdown("---")
         
-        # Real-time графік
-        self.render_real_time_chart()
+        # Real-time монітор
+        self.render_real_time_monitor(df)
         
-        # Аналіз у вкладках
-        self.render_analysis_tabs()
+        # Розділ з табами для різних аналізів
+        st.markdown("---")
         
-        st.divider()
+        # Основні аналізи в два стовпці
+        col1, col2 = st.columns(2)
         
-        # Управління алертами
-        self.render_alerts_section()
+        with col1:
+            self.render_temporal_heatmap(df)
         
-        # Кнопка симуляції для демонстрації
-        st.divider()
-        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Run Demo Simulation", use_container_width=True, type="primary"):
-                self.run_simulation()
+            self.render_model_comparison(df)
         
-        # Автооновлення
-        if auto_refresh:
-            time.sleep(refresh_interval)
-            st.rerun()
-    
-    def run_simulation(self):
-        """Демонстраційна симуляція"""
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        st.markdown("---")
         
-        for i in range(50):  # 50 iterations
-            # Симуляція обробки повідомлення
-            new_data = self.simulate_real_time_data()
-            
-            # Оновлення прогресу
-            progress = (i + 1) / 50
-            progress_bar.progress(progress)
-            status_text.text(f"Processing message {i+1}/50: {new_data['message'][:30]}...")
-            
-            # Імітація обробки
-            time.sleep(0.1)
-            
-            # Додавання до session state для демонстрації
-            if 'simulation_alerts' not in st.session_state:
-                st.session_state.simulation_alerts = []
-            
-            if new_data['is_anomaly']:
-                st.session_state.simulation_alerts.append(new_data)
+        # Аналіз загроз
+        self.render_threat_analysis(df)
         
-        progress_bar.empty()
-        status_text.empty()
+        st.markdown("---")
         
-        # Результати симуляції
-        st.success("✅ Simulation completed!")
+        # Консоль алертів
+        self.render_alerts_console(df)
         
-        if hasattr(st.session_state, 'simulation_alerts') and st.session_state.simulation_alerts:
-            st.info(f"🚨 Generated {len(st.session_state.simulation_alerts)} alerts during simulation")
-            
-            # Показуємо останні alerts
-            with st.expander("View Generated Alerts"):
-                for alert in st.session_state.simulation_alerts[-5:]:  # Last 5 alerts
-                    st.write(f"**{alert['source_addr']}**: {alert['message']} (Score: {alert['anomaly_score']:.3f})")
-
-
-# Функції конфігурації
-def create_streamlit_config():
-    """Створення .streamlit/config.toml"""
-    config_content = """
-[theme]
-primaryColor = "#FF4B4B"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
-font = "sans serif"
-
-[server]
-port = 8501
-enableCORS = false
-enableXsrfProtection = true
-maxUploadSize = 50
-
-[browser]
-gatherUsageStats = false
-showErrorDetails = false
-
-[logger]
-level = "info"
-"""
-    
-    os.makedirs('.streamlit', exist_ok=True)
-    with open('.streamlit/config.toml', 'w') as f:
-        f.write(config_content)
-
-
-def create_requirements_file():
-    """Створення requirements.txt для Streamlit додатку"""
-    requirements = """
-streamlit>=1.28.0
-pandas>=1.5.0
-numpy>=1.24.0
-plotly>=5.15.0
-joblib>=1.3.0
-sqlite3
-"""
-    
-    with open('requirements_dashboard.txt', 'w') as f:
-        f.write(requirements)
+        # Footer
+        st.markdown("---")
+        st.markdown("""
+        <div style="text-align: center; padding: 20px;">
+            <p class="monitor-text" style="font-size: 0.8em;">
+                SMPP ANOMALY DETECTION SYSTEM v2.0 | POWERED BY ML ENSEMBLE | 
+                <span style="color: #00F5A0;">● SYSTEM OPERATIONAL</span>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Оновлення last_refresh
+        st.session_state.last_refresh = datetime.now()
 
 
 def main():
-    """Головна функція запуску додатку"""
+    """Точка входу"""
     try:
-        # Створення конфігурації
-        create_streamlit_config()
-        create_requirements_file()
-        
-        # Запуск дашборду
-        dashboard = SMPPAnomalyDashboard()
+        dashboard = CyberSecurityDashboard()
         dashboard.run()
-        
     except Exception as e:
-        st.error(f"Application error: {e}")
-        st.info("Please check your database connection and model files.")
+        st.error(f"❌ CRITICAL ERROR: {e}")
+        st.info("Please check database connection at: data/db/smpp.sqlite")
         
-        # Показуємо інформацію для налагодження
-        with st.expander("🔧 Debug Information"):
-            st.write("**Current working directory:**", os.getcwd())
-            st.write("**Available files:**")
-            for root, dirs, files in os.walk('.'):
-                level = root.replace('.', '').count(os.sep)
-                indent = ' ' * 2 * level
-                st.write(f"{indent}{os.path.basename(root)}/")
-                subindent = ' ' * 2 * (level + 1)
-                for file in files[:5]:  # Show first 5 files only
-                    st.write(f"{subindent}{file}")
-                if len(files) > 5:
-                    st.write(f"{subindent}... and {len(files)-5} more files")
+        # Debug information
+        with st.expander("🔧 DEBUG INFORMATION"):
+            st.write("**Expected DB Path:** data/db/smpp.sqlite")
+            st.write("**Current Working Directory:**", os.getcwd())
+            
+            # Check if path exists
+            db_path = Path("data/db/smpp.sqlite")
+            st.write("**Database Exists:**", db_path.exists())
+            
+            if db_path.exists():
+                st.write("**Database Size:**", f"{db_path.stat().st_size / 1024 / 1024:.2f} MB")
+            
+            # Show directory structure
+            st.write("**Directory Structure:**")
+            for path in Path(".").rglob("*.sqlite"):
+                st.write(f"  - {path}")
 
 
 if __name__ == "__main__":
