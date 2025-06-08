@@ -1,10 +1,19 @@
-SELECT * FROM anomaly_analysis
+SELECT
+    aa.is_anomaly,aa.final_anomaly_score,
+    sm.message_text
+FROM
+    anomaly_analysis AS aa
+JOIN
+    smpp_messages AS sm
+    ON aa.message_id = sm.id
 LIMIT 1000;
+
 DELETE FROM captured_pdus;
 DELETE FROM smpp_messages;
 DELETE FROM sqlite_sequence WHERE name='captured_pdus';
 DELETE FROM sqlite_sequence WHERE name='smpp_messages';
 DROP TABLE IF EXISTS anomaly_analysis;
+DELETE FROM anomaly_analysis;
 DELETE FROM sqlite_sequence WHERE name='anomaly_analysis';
 CREATE TABLE IF NOT EXISTS anomaly_analysis (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

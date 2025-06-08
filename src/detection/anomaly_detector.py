@@ -183,7 +183,7 @@ class SMPPAnomalyDetectionPipeline:
         alpha = 0.1
         mid   = self.ae_threshold
         ae_score = 1 / (1 + math.exp(-alpha*(ae_error - mid)))
-        ae_anomaly = ae_score > 0.88
+        ae_anomaly = ae_score > 0.92
        
        # Isolation Forest предикція
         X_if = features[self.if_features].fillna(0).values
@@ -195,8 +195,8 @@ class SMPPAnomalyDetectionPipeline:
         if_anomaly = bool(float(if_score) > 0.1)
        
         # Комбінування
-        final_score = 0.6 * ae_score + 0.4 * if_score
-        is_anomaly = ae_anomaly or if_anomaly
+        final_score = 0.5 * ae_score + 0.5 * if_score
+        is_anomaly = (ae_anomaly or if_anomaly) and (final_score >= 0.5)
         risk_level = 'CRITICAL' if final_score > 0.8 else 'HIGH' if final_score > 0.6 else 'MEDIUM' if final_score > 0.3 else 'LOW'
         confidence_level = (2 * (ae_score * if_score)) / (ae_score * if_score) if (ae_score * if_score) > 0 else 0
         print(">>> IF scores per model:", if_score)
@@ -280,5 +280,5 @@ if __name__ == "__main__":
     #print(f"Message 1 - Anomaly: {result['is_anomaly']}, Score: {result['final_anomaly_score']:.3f}")
    
    # Аналіз батчу
-    stats = pipeline.analyze_batch(1000)
+    stats = pipeline.analyze_batch(10000)
     print(f"Processed: {stats['processed']}, Anomalies: {stats['anomalies']}")
