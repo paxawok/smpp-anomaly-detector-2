@@ -1,0 +1,14 @@
+{
+  "feature_columns": [
+    "hour", "day_of_week", "message_length", "source_addr_length", 
+    "source_is_numeric", "dest_is_valid", "message_parts", "encoding_issues", 
+    "empty_message", "excessive_length", "sender_frequency", "recipient_frequency", 
+    "sender_burst", "recipient_burst", "high_sender_frequency", 
+    "high_recipient_frequency", "suspicious_word_count", "url_count", 
+    "suspicious_url", "urgency_score", "message_entropy", "obfuscation_score", 
+    "social_engineering", "night_time", "weekend", "business_hours", 
+    "time_category_anomaly", "sender_legitimacy", "financial_patterns",
+    "phone_numbers", "source_category_mismatch", "category_time_mismatch",
+    "unusual_sender_pattern", "typosquatting"
+  ]
+}

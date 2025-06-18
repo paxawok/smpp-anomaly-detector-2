@@ -1,0 +1,5 @@
+{
+  "scaler_type": "standard",
+  "handle_missing": "median",
+  "categorical_encoding": "onehot"
+}

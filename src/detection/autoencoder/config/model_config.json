@@ -1,0 +1,11 @@
+{
+  "model_type": "improved_smpp_autoencoder",
+  "architecture": {
+    "input_dim": null,
+    "encoding_dim": 32,
+    "hidden_dims": [256, 128, 64],
+    "dropout_rate": 0.3,
+    "use_attention": true,
+    "attention_heads": 4
+  }
+}
