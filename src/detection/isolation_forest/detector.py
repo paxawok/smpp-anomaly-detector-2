@@ -20,7 +20,7 @@ class IsolationForestDetector:
     """Детектор аномалій на основі Isolation Forest"""
     
     def __init__(self, config_dir: str = "config"):
-        self.config_loader = ConfigLoader(config_dir)
+        self.config_loader = ConfigLoader(f"src/detection/isolation_forest/{config_dir}")
         
         # Завантаження конфігурацій
         self.model_config = self.config_loader.get_model_config()
@@ -151,7 +151,7 @@ class IsolationForestDetector:
 
 def main():
     """Приклад використання"""
-    detector = IsolationForestDetector()
+    detector = IsolationForestDetector(config_dir="src/detection/isolation_forest/config_if")
     
     # Завантаження даних
     df = pd.read_csv('data/datasets/smpp_weekly_dataset_features_optimized.csv', 

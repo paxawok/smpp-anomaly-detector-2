@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from typing import Dict
-from .config_loader import ConfigLoader
 
 __all__ = ['ConfigLoader']
 
