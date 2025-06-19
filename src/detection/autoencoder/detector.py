@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Optional, Union
 import logging
 
 from .config import get_model_config, get_training_config, get_features_config
-from .models import ImprovedSMPPAutoencoder
+from .models_ae import ImprovedSMPPAutoencoder
 from .preprocessing import AdvancedDataPreprocessor
 from .training import Trainer
 from .evaluation import ThresholdOptimizer, calculate_metrics, Visualizer
