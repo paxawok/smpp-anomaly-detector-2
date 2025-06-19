@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional
 import logging
 
-from .config_if import ConfigLoader
-from .models_if import OptimizedIsolationForest
-from .preprocessing import FeatureSelector, DataPreprocessor
-from .calibration import DynamicThresholdCalibrator
-from .evaluation import MetricsCalculator, Visualizer
-from .utils import ModelPersistence, setup_logger
+from src.detection.isolation_forest.config_if import ConfigLoader
+from src.detection.isolation_forest.models_if import OptimizedIsolationForest
+from src.detection.isolation_forest.preprocessing import FeatureSelector, DataPreprocessor
+from src.detection.isolation_forest.calibration import DynamicThresholdCalibrator
+from src.detection.isolation_forest.evaluation import MetricsCalculator, Visualizer
+from src.detection.isolation_forest.utils import ModelPersistence, setup_logger
 
 logger = setup_logger('isolation_forest')
 
