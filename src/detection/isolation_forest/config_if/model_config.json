@@ -1,0 +1,19 @@
+{
+  "algorithm": "isolation_forest",
+  "ensemble_size": 3,
+  "base_params": {
+    "n_estimators": 200,
+    "max_samples": 0.8,
+    "contamination": 0.03,
+    "max_features": 1.0,
+    "bootstrap": false,
+    "n_jobs": -1,
+    "random_state": 42
+  },
+  "optimization": {
+    "target_precision": 0.95,
+    "max_features_count": 10,
+    "remove_low_variance": true,
+    "variance_threshold": 0.01
+  }
+}

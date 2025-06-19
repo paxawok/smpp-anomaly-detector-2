@@ -76,13 +76,21 @@ class SMPPVAE(BaseAutoencoder):
         eps = torch.randn_like(std)
         return mu + eps * std
     
-    def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Кодування у латентний простір"""
+    """def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        #Кодування у латентний простір
         h = self.encoder(x)
         mu = self.fc_mu(h)
         logvar = self.fc_var(h)
         z = self.reparameterize(mu, logvar)
-        return z, mu, logvar
+        return z, mu, logvar"""
+    
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """Кодування у латентний простір для сумісності"""
+        h = self.encoder(x)
+        mu = self.fc_mu(h)
+        logvar = self.fc_var(h)
+        z = self.reparameterize(mu, logvar)
+        return z  # Повертаємо тільки z для сумісності з base класом
     
     def decode(self, z: torch.Tensor) -> torch.Tensor:
         """Декодування з латентного простору"""
@@ -108,3 +116,9 @@ class SMPPVAE(BaseAutoencoder):
             'recon_loss': recon_loss,
             'kl_loss': kl_loss
         }
+    
+    def get_reconstruction_error(self, x: torch.Tensor) -> torch.Tensor:
+        """Обчислення помилки реконструкції для VAE"""
+        with torch.no_grad():
+            reconstructed, _, _, _ = self.forward(x)
+            return torch.mean((x - reconstructed) ** 2, dim=1)

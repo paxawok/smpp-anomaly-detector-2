@@ -1,0 +1,13 @@
+{
+  "dynamic_calibration": {
+    "enabled": true,
+    "window_size": 2000,
+    "update_frequency": 500,
+    "percentile_threshold": 97
+  },
+  "drift_detection": {
+    "enabled": true,
+    "ks_test_alpha": 0.05,
+    "mean_shift_threshold": 0.15
+  }
+}

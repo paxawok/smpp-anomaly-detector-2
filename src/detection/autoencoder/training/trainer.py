@@ -26,7 +26,10 @@ class Trainer:
         self.scheduler = self._create_scheduler()
         
         # Loss
-        self.criterion = nn.MSELoss() 
+        #self.criterion = nn.MSELoss() 
+        from .losses import VAELoss
+        self.criterion = VAELoss(beta=1.0)
+
         
         # Історія
         self.history = {
@@ -100,11 +103,15 @@ class Trainer:
             self.optimizer.zero_grad()
             
             # Forward pass
-            outputs, encoded = self.model(inputs)
+            #outputs, encoded = self.model(inputs)
             
             # Loss
-            loss = self.criterion(outputs, inputs)
-            
+            #loss = self.criterion(outputs, inputs)
+            outputs, z, mu, logvar = self.model(inputs)
+            loss_dict = self.criterion(outputs, inputs, mu, logvar)
+            loss = loss_dict['loss']
+
+
             # Backward pass
             loss.backward()
             
@@ -129,8 +136,13 @@ class Trainer:
         with torch.no_grad():
             for batch in val_loader:
                 inputs = batch[0].to(self.device, non_blocking=True)
-                outputs, encoded = self.model(inputs)
-                loss = self.criterion(outputs, inputs)
+                #outputs, encoded = self.model(inputs)
+                #loss = self.criterion(outputs, inputs)
+
+                outputs, z, mu, logvar = self.model(inputs)
+                loss_dict = self.criterion(outputs, inputs, mu, logvar)
+                loss = loss_dict['loss']
+                
                 total_loss += loss.item() * inputs.size(0)
         
         return total_loss / len(val_loader.dataset)

@@ -1,0 +1,26 @@
+{
+  "selected_features": [
+    "message_entropy",
+    "obfuscation_score", 
+    "suspicious_word_count",
+    "social_engineering",
+    "financial_patterns",
+    "sender_legitimacy",
+    "sender_frequency",
+    "sender_burst",
+    "unusual_sender_pattern",
+    "night_time"
+  ],
+  "composite_features": {
+    "total_suspicion_score": {
+      "enabled": true,
+      "components": ["suspicious_word_count", "social_engineering", "financial_patterns"],
+      "weights": [0.3, 0.4, 0.3]
+    }
+  },
+  "preprocessing": {
+    "remove_correlated": true,
+    "correlation_threshold": 0.85,
+    "scale_features": false
+  }
+}

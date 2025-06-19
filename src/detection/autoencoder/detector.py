@@ -9,7 +9,8 @@ from typing import Dict, Tuple, Optional, Union
 import logging
 
 from src.detection.autoencoder.config_ae import get_model_config, get_training_config, get_features_config
-from src.detection.autoencoder.models_ae import ImprovedSMPPAutoencoder
+#from src.detection.autoencoder.models_ae import ImprovedSMPPAutoencoder
+from src.detection.autoencoder.models_ae import SMPPVAE
 from src.detection.autoencoder.preprocessing import AdvancedDataPreprocessor
 from src.detection.autoencoder.training import Trainer
 from src.detection.autoencoder.evaluation import ThresholdOptimizer, calculate_metrics, Visualizer
@@ -62,7 +63,8 @@ class SMPPAnomalyDetector:
         
         # 3. Створення моделі
         self.model_config['architecture']['input_dim'] = X.shape[1]
-        self.model = ImprovedSMPPAutoencoder(self.model_config)
+        #self.model = ImprovedSMPPAutoencoder(self.model_config)
+        self.model = SMPPVAE(self.model_config)
         
         # 4. Підготовка даних
         train_loader, val_loader = self.data_loader.prepare_dataloaders(
@@ -153,7 +155,8 @@ class SMPPAnomalyDetector:
         
         # Відновлення компонентів
         self.model_config = checkpoint['model_config']
-        self.model = ImprovedSMPPAutoencoder(self.model_config)
+        #self.model = ImprovedSMPPAutoencoder(self.model_config)
+        self.model = SMPPVAE(self.model_config)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.to(self.device)
         
