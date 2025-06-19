@@ -29,7 +29,7 @@ class AdvancedDataPreprocessor:
         df = df.copy()
         
         # Завантаження конфігурації features
-        from ..config import get_features_config
+        from ..config_ae import get_features_config
         features_config = get_features_config()
         feature_columns = features_config['feature_columns']
         
@@ -122,14 +122,7 @@ class AdvancedDataPreprocessor:
     
     def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Очистка даних"""
-        numeric_columns = df.select_dtypes(include=[np.number]).columns
-        df[numeric_columns] = df[numeric_columns].replace([np.inf, -np.inf], np.nan)
-        
-        for col in numeric_columns:
-            if col in df.columns:
-                median_value = df[col].median()
-                if pd.isna(median_value):
-                    median_value = 0
-                df[col] = df[col].fillna(median_value)
-        
+        # Заповнити NaN медіаною одразу для всіх числових
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
         return df

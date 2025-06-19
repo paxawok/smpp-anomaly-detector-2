@@ -8,12 +8,15 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional, Union
 import logging
 
-from .config import get_model_config, get_training_config, get_features_config
-from .models_ae import ImprovedSMPPAutoencoder
-from .preprocessing import AdvancedDataPreprocessor
-from .training import Trainer
-from .evaluation import ThresholdOptimizer, calculate_metrics, Visualizer
-from .utils import DataLoader, ModelPersistence, setup_logger
+from src.detection.autoencoder.config_ae import get_model_config, get_training_config, get_features_config
+from src.detection.autoencoder.models_ae import ImprovedSMPPAutoencoder
+from src.detection.autoencoder.preprocessing import AdvancedDataPreprocessor
+from src.detection.autoencoder.training import Trainer
+from src.detection.autoencoder.evaluation import ThresholdOptimizer, calculate_metrics, Visualizer
+from src.detection.autoencoder.utils import DataLoader, ModelPersistence, setup_logger
+import warnings
+warnings.filterwarnings('ignore')
+
 
 logger = setup_logger('detector')
 

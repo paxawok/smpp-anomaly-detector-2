@@ -46,12 +46,11 @@ class ImprovedSMPPAutoencoder(BaseAutoencoder):
         layers = []
         prev_dim = self.input_dim
         
-        for i, hidden_dim in enumerate(self.hidden_dims):
+        for hidden_dim in self.hidden_dims:
             layers.extend([
                 nn.Linear(prev_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                nn.LeakyReLU(0.2),
-                nn.Dropout(self.dropout_rate * (1 - i/len(self.hidden_dims)))
+                nn.ReLU(),
+                nn.Dropout(self.dropout_rate)
             ])
             prev_dim = hidden_dim
         
@@ -65,9 +64,8 @@ class ImprovedSMPPAutoencoder(BaseAutoencoder):
         for i in range(len(hidden_dims_reversed) - 1):
             layers.extend([
                 nn.Linear(hidden_dims_reversed[i], hidden_dims_reversed[i+1]),
-                nn.BatchNorm1d(hidden_dims_reversed[i+1]),
-                nn.LeakyReLU(0.2),
-                nn.Dropout(self.dropout_rate * (i+1)/len(hidden_dims_reversed))
+                nn.ReLU(),
+                nn.Dropout(self.dropout_rate)
             ])
         
         layers.append(nn.Linear(hidden_dims_reversed[-1], self.input_dim))
@@ -87,11 +85,6 @@ class ImprovedSMPPAutoencoder(BaseAutoencoder):
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Кодування"""
         encoded_features = self.encoder(x)
-        
-        if self.use_attention:
-            attn_input = encoded_features.unsqueeze(1)
-            attn_output, _ = self.attention(attn_input, attn_input, attn_input)
-            encoded_features = attn_output.squeeze(1)
         
         return self.encoding_layer(encoded_features)
     

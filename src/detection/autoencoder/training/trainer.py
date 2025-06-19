@@ -26,8 +26,7 @@ class Trainer:
         self.scheduler = self._create_scheduler()
         
         # Loss
-        from .losses import CombinedLoss
-        self.criterion = CombinedLoss()
+        self.criterion = nn.MSELoss() 
         
         # Історія
         self.history = {

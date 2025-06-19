@@ -1,24 +1,18 @@
 {
   "feature_columns": [
     "message_length",
-    "message_entropy",
+    "message_entropy", 
     "obfuscation_score",
     "sender_frequency",
-    "sender_burst",
     "urgency_score",
     "suspicious_word_count",
-    "source_is_numeric",
     "unusual_sender_pattern",
     "sender_legitimacy",
-    "time_category_anomaly",
-    "night_time",
     "social_engineering",
     "financial_patterns",
     "url_count",
     "suspicious_url",
-    "typosquatting",
-    "source_category_mismatch",
-    "hour",
-    "day_of_week"
+    "night_time",
+    "hour"
   ]
 }

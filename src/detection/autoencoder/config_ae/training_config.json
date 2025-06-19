@@ -1,0 +1,9 @@
+{
+  "batch_size": 512,
+  "epochs": 50,
+  "learning_rate": 0.002,
+  "weight_decay": 1e-4,
+  "early_stopping_patience": 8,
+  "gradient_clip": 1.0,
+  "threshold_percentile": 98
+}

@@ -31,7 +31,7 @@ class ThresholdOptimizer:
     
     def _percentile_threshold(self, errors: np.ndarray) -> float:
         """Поріг на основі percentile"""
-        return np.percentile(errors, self.percentile)
+        return np.percentile(errors, min(self.percentile, 98))
     
     def _optimal_f1_threshold(self, errors: np.ndarray, y_true: np.ndarray) -> float:
         """Оптимальний поріг для максимального F1"""
