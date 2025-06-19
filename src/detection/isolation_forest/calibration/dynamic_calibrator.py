@@ -3,6 +3,9 @@ from collections import deque
 from typing import Dict, Optional
 from scipy import stats
 import logging
+from sklearn.metrics import precision_recall_curve
+
+
 
 class DynamicThresholdCalibrator:
     """Динамічна калібрація порогу"""
@@ -59,13 +62,17 @@ class DynamicThresholdCalibrator:
     
     def _optimize_with_labels(self, scores: np.ndarray, y_true: np.ndarray) -> float:
         """Оптимізація з мітками"""
+
         from sklearn.metrics import precision_recall_curve
         
         anomaly_scores = -scores
         precision, recall, thresholds = precision_recall_curve(y_true, anomaly_scores)
         
         # Шукаємо поріг з precision >= 0.95
-        high_precision_idx = np.where(precision[:-1] >= 0.95)[0]
+        #high_precision_idx = np.where(precision[:-1] >= 0.95)[0]
+
+        target_precision = self.config.get("min_precision")
+        high_precision_idx = np.where(precision[:-1] >= target_precision)[0]
         
         if len(high_precision_idx) > 0:
             best_idx = high_precision_idx[np.argmax(recall[high_precision_idx])]

@@ -6,9 +6,11 @@ __all__ = ['ConfigLoader']
 
 class ConfigLoader:
     """Завантаження конфігурацій"""
-    
-    def __init__(self, config_dir: str):
-        self.config_dir = Path(config_dir)
+
+    def __init__(self):
+        self.config_dir = Path(__file__).resolve().parent
+        print("CONFIG PATH:", self.config_dir)
+
     
     def _load_config(self, filename: str) -> Dict:
         """Завантаження JSON конфігу"""

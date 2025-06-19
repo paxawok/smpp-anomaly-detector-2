@@ -2,8 +2,9 @@
   "dynamic_calibration": {
     "enabled": true,
     "window_size": 2000,
-    "update_frequency": 500,
-    "percentile_threshold": 97
+    "update_frequency": 500,        
+    "min_precision": 0.85,
+    "percentile_threshold": 90
   },
   "drift_detection": {
     "enabled": true,
