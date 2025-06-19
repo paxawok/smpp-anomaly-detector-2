@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader as TorchDataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 import logging
 
 logger = logging.getLogger(__name__)
