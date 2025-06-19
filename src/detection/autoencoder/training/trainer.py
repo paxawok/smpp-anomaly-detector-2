@@ -103,7 +103,7 @@ class Trainer:
             outputs, encoded = self.model(inputs)
             
             # Loss
-            loss = self.criterion(inputs, outputs, encoded)
+            loss = self.criterion(outputs, inputs)
             
             # Backward pass
             loss.backward()
@@ -130,7 +130,7 @@ class Trainer:
             for batch in val_loader:
                 inputs = batch[0].to(self.device, non_blocking=True)
                 outputs, encoded = self.model(inputs)
-                loss = self.criterion(inputs, outputs, encoded)
+                loss = self.criterion(outputs, inputs)
                 total_loss += loss.item() * inputs.size(0)
         
         return total_loss / len(val_loader.dataset)
