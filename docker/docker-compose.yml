@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Основний сервіс - Dashboard для візуалізації
+  dashboard:
+    build: 
+      context: ../  # Збираємо з кореня проєкту
+      dockerfile: docker/Dockerfile
+    container_name: smpp-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../data:/app/data:rw
+      - ../models:/app/models:ro
+      - ../logs:/app/logs:rw
+      - ../config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - smpp-network
+
+  # 1. Генерація тестових SMPP PDU
+  data-generator:
+    build: 
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: smpp-data-generator
+    volumes:
+      - ../data:/app/data:rw
+      - ../logs:/app/logs:rw
+      - ../config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "data/pdu_generator.py"]
+    networks:
+      - smpp-network
+    profiles:
+      - pipeline
+
+  # 2. Парсинг PDU в повідомлення
+  pdu-parser:
+    build: 
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: smpp-pdu-parser
+    volumes:
+      - ../data:/app/data:rw
+      - ../logs:/app/logs:rw
+      - ../config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "src/detection/parser/smpp_pdu_parser.py", "data/db/smpp.sqlite", "10000"]
+    networks:
+      - smpp-network
+    profiles:
+      - pipeline
+
+  # 3. Екстракція ознак з повідомлень
+  feature-extractor:
+    build: 
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: smpp-feature-extractor
+    volumes:
+      - ../data:/app/data:rw
+      - ../models:/app/models:ro
+      - ../logs:/app/logs:rw
+      - ../config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "src/detection/feature_extractor.py"]
+    networks:
+      - smpp-network
+    profiles:
+      - pipeline
+
+  # 4. Виявлення аномалій з використанням навчених моделей
+  anomaly-detector:
+    build: 
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: smpp-anomaly-detector
+    volumes:
+      - ../data:/app/data:rw
+      - ../models:/app/models:ro
+      - ../logs:/app/logs:rw
+      - ../config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "src/detection/anomaly_detector.py"]
+    networks:
+      - smpp-network
+    profiles:
+      - pipeline
+
+networks:
+  smpp-network:
+    driver: bridge
